@@ -1,0 +1,33 @@
+{
+  "name": "storybook-addon-tsdoc",
+  "storybook": {
+    "displayName": "storybook-addon-tsdoc",
+    "supportedFrameworks": [
+      "react",
+      "vue",
+      "angular",
+      "web-components",
+      "ember",
+      "html",
+      "svelte",
+      "preact",
+      "react-native"
+    ]
+  },
+  "dependencies": {
+    "console-log-colors": "^0.5.0",
+    "ts-morph": "^24.0.0"
+  },
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
