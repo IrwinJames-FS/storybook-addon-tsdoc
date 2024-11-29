@@ -1,13 +1,14 @@
 import { isAbsolute, join } from "path";
 
 import { blueBright, cyan, gray, green, red, yellow } from "console-log-colors";
-import { Project, SourceFile } from "ts-morph";
+import { Project, SourceFile, SyntaxList } from "ts-morph";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
-import { getFullName, getSignatureName } from "./node-tools";
-import { walk } from "./node-walker";
-import { TSDocOptions } from "types";
-import { STORY_BOOK_BLOCK } from "./constants";
+import { TSDocOptions } from "./types";
+
 import { minimatch } from "minimatch";
+import { walk } from "./SKMap";
+import { getSignature } from "./node-signature";
+
 
 
 /**
@@ -40,14 +41,16 @@ export default class TS {
 
 	static kindColor = "#F08";
 	static get style(){
-		return `
+		return `<style>
+{\`
 span{
 	font-size: inherit;
 }
 .ts-doc-kind{
 	color:${this.kindColor}
 }
-`
+\`}
+</style>`
 	}
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
@@ -91,9 +94,17 @@ span{
 		return TS.aliases.reduce((o,v)=>o.replace(...v), url);
 	}
 
+	/**
+	 * Resolves the url to a doc url
+	 * 
+	 * This should not be used on urls outside the entry path.
+	 * @param url 
+	 * @returns 
+	 */
 	static resolvedDocFilePath(url: string): string{
 		return join(this.docs, url.replace(/\//g, '-')+'.mdx');
 	}
+
 	/**
 	 * Create a project (program) and crawl the parsed data.
 	 */
@@ -106,32 +117,32 @@ span{
 		project.getSourceFiles().forEach(this.documentSourceFile);
 	} 
 
+	/**
+	 * Document the source file.
+	 * 
+	 * at this time this will create an mdx file if any nodes are traversed in said directory
+	 * 
+	 *
+	 * @todo wrap style in style tag since it will never be used in any other way.
+	 * @param source 
+	 * @returns 
+	 */
 	static documentSourceFile(source: SourceFile){
-		TS.log("Documenting", gray(source.getFilePath()));
-		const syntaxList = source.getChildSyntaxList();
-		if(!syntaxList) return;
-		let data = STORY_BOOK_BLOCK;
-		const filePath = source.getFilePath();
-		const title = TS.resolveUrl(filePath)!;
-		data += `<Meta title="${title}"/>
-		
+		let data = ''
+		for(const node of walk(source)){
+			TS.success(node.getKindName());
+			data += `## ${getSignature(node)}
 `;
-		let count = 0;
-		for(const node of walk(syntaxList)){
-			TS.warn(getFullName(node));
-			const name = getSignatureName(node);
-			if(!name) continue;
-			data += `## ${name}
-			
-`
-			count++;
 		}
-		if(count) writeFileSync(TS.resolvedDocFilePath(title), data+`
-<style>
-{\`
-	${TS.style}
-\`}
-</style>`)
+		if(!data) return;
+		const path = TS.resolveUrl(source.getFilePath())!;
+		return writeFileSync(TS.resolvedDocFilePath(path), `import { Meta } from "@storybook/blocks";
+		
+<Meta title="${path}"/>
+
+${data}
+
+${TS.style}`);
 	}
 
 	static log(...args: unknown[]){

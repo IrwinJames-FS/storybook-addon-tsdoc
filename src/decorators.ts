@@ -1,0 +1,1 @@
+export const $kind = (kind:string)=>`<span className="ts-doc-kind">${kind}</span>`;

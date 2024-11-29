@@ -7,12 +7,11 @@
     "strict": true,
     "skipLibCheck": true,
     "declaration": true,
-    "baseUrl": "./src",
     "outDir": "dist"
   },
   "include": [
     "src/**/*.ts"
-  ],
+, "src/SKManager"  ],
   "exclude": [
     "node_modules",
   ]

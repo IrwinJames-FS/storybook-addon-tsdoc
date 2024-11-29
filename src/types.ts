@@ -1,3 +1,5 @@
+import { Node } from "ts-morph"
+
 export type TSDocOptions = {
 	/**
 	 * The path to the projects tsconfig file
@@ -24,3 +26,8 @@ export type TSDocOptions = {
 	 */
 	//renderStyle: 'source' | 'declaration' for MVP just handle by source as it has the least amount of extra logic
 }
+
+/**
+ * Just a convenience type as optional but required arguments come up alot with ts-morph
+ */
+export type Nodely<T extends Node = Node> = T | undefined;
