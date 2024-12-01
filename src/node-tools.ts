@@ -19,9 +19,7 @@ const hasName = <T extends Node>(node: T): node is T & Nameable => 'getName' in 
 export const getName = <T extends Node>(node: T):string => hasName(node) ? node.getName()
 :'';
 
-export const getSignature = (node: Node) => {
-	return `<span className="ts-doc-kind">${node.getKindName()}</span> ${getName(node)}`
-}
+
 /**
  * Gets a / delimited list of names from source to current node
  * @param node 
@@ -32,10 +30,18 @@ export const getFullName = (node: Node, delim:string=".") => {
 	return [family, getName(node)].filter(a=>a).join(delim);
 }
 
+/**
+ * Gets the signature of a declaration. 
+ * @param node 
+ * @param delim 
+ * @returns 
+ */
 export const getSignatureName = (node:Node, delim:string=".") => {
 	const family = getFamilyName(node, delim);
-	return `<span className="ts-doc-kind">${node.getKindName()}</span> ${[family, getName(node)].filter(a=>a).join(delim)}`;
+	return `${[family, getName(node)].filter(a=>a).join(delim)}`;
 }
+
+export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(j=>j.getComment()).join('\n');
 /**
  * Converts the ancestors into a family name.
  * @param node 
@@ -62,3 +68,7 @@ export const isPrimitive = (node?: Node) => node ? (
 	|| Node.isFalseLiteral(node)
 	|| Node.isLiteralTypeNode(node)
 ): false;
+
+
+
+

@@ -1,13 +1,16 @@
 import { isAbsolute, join } from "path";
 
 import { blueBright, cyan, gray, green, red, yellow } from "console-log-colors";
-import { Project, SourceFile } from "ts-morph";
+import { Project, SourceFile, SyntaxList } from "ts-morph";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
-import { getFullName, getSignatureName } from "./node-tools";
-import { walk } from "./node-walker";
-import { TSDocOptions } from "types";
-import { STORY_BOOK_BLOCK } from "./constants";
+import { TSDocOptions } from "./types";
+
 import { minimatch } from "minimatch";
+import { getSignature } from "./node-signature";
+import { traverse } from "./traverse";
+import { $kind } from "./decorators";
+import { getComments, getFullName } from "./node-tools";
+
 
 
 /**
@@ -39,15 +42,47 @@ export default class TS {
 	static renderStyle: 'source' | 'declaration' = 'declaration'; //not supported yet
 
 	static kindColor = "#F08";
+	static typeColor = "rgb(28,128,248)";
+	static refColor = "rgb(0,100,220)";
+	static litColor = "rgb(248, 28, 28)";
 	static get style(){
-		return `
+		return `<style>
+{\`
+h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
+	height: 0; /* hide without being hidden */
+	padding: 0;
+	margin: 0;
+	font-size:0;
+	border-bottom-width: 0px;
+	position: relative;
+	top: -3rem;
+
+}
+
+h1:not(.ts-doc-header) > a, h2:not(.ts-doc-header) > a, h3:not(.ts-doc-header) > a, h4:not(.ts-doc-header) > a, h5:not(.ts-doc-header) > a, h6:not(.ts-doc-header) > a{
+	margin-top: 1rem;
+}
+
+.ts-doc-header:hover + *>a:first-of-type>svg {
+	visibility: visible;
+}
 span{
 	font-size: inherit;
 }
 .ts-doc-kind{
 	color:${this.kindColor}
 }
-`
+.ts-doc-type{
+	color:${this.typeColor}
+}
+.ts-doc-ref{
+	color:${this.refColor}
+}
+.ts-doc-lit{
+	color:${this.litColor}
+}
+\`}
+</style>`
 	}
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
@@ -91,9 +126,17 @@ span{
 		return TS.aliases.reduce((o,v)=>o.replace(...v), url);
 	}
 
+	/**
+	 * Resolves the url to a doc url
+	 * 
+	 * This should not be used on urls outside the entry path.
+	 * @param url 
+	 * @returns 
+	 */
 	static resolvedDocFilePath(url: string): string{
 		return join(this.docs, url.replace(/\//g, '-')+'.mdx');
 	}
+
 	/**
 	 * Create a project (program) and crawl the parsed data.
 	 */
@@ -106,32 +149,40 @@ span{
 		project.getSourceFiles().forEach(this.documentSourceFile);
 	} 
 
+	/**
+	 * Document the source file.
+	 * 
+	 * at this time this will create an mdx file if any nodes are traversed in said directory
+	 * 
+	 *
+	 * @todo wrap style in style tag since it will never be used in any other way.
+	 * @param source 
+	 * @returns 
+	 */
 	static documentSourceFile(source: SourceFile){
-		TS.log("Documenting", gray(source.getFilePath()));
-		const syntaxList = source.getChildSyntaxList();
-		if(!syntaxList) return;
-		let data = STORY_BOOK_BLOCK;
-		const filePath = source.getFilePath();
-		const title = TS.resolveUrl(filePath)!;
-		data += `<Meta title="${title}"/>
-		
+		let data = ''
+		for(const [kind, node] of traverse(source)){
+			TS.success(kind, node.getKindName());
+			data += `<h2 className="ts-doc-header">${$kind(kind)} ${getSignature(node)}</h2>
+
+## ${getFullName(node)}
+
+${getComments(node)}
+
 `;
-		let count = 0;
-		for(const node of walk(syntaxList)){
-			TS.warn(getFullName(node));
-			const name = getSignatureName(node);
-			if(!name) continue;
-			data += `## ${name}
-			
-`
-			count++;
 		}
-		if(count) writeFileSync(TS.resolvedDocFilePath(title), data+`
-<style>
-{\`
-	${TS.style}
-\`}
-</style>`)
+		if(!data) return;
+		const path = TS.resolveUrl(source.getFilePath())!;
+		return writeFileSync(TS.resolvedDocFilePath(path), `import { Meta } from "@storybook/blocks";
+		
+<Meta title="${path}"/>
+
+[test](/docs/primitives-ts#alt_number_array)
+
+${data}
+
+
+${TS.style}`);
 	}
 
 	static log(...args: unknown[]){
