@@ -11,8 +11,30 @@ import { traverse } from "./traverse";
 import { $kind } from "./decorators";
 import { getComments, getFullName } from "./node-tools";
 
+declare global {
+	interface String {
+		wrap(a: string, b:string):string
+	}
+}
 
-
+const HTML_CHARS: Record<string, string> = {
+	"&":"&amp;",
+	"<":"&lt;",
+	">":"&gt;",
+	'"':"&quot;",
+	"'":"&#039;",
+	"{":"&lcub;",
+	"}":"&rcub;"
+}
+/**
+ * This should be used to avoid errors with acorn... idealy it should be unecessary but for now will be used.
+ * @param text 
+ */
+const escape = (text:string)=>text.replace(/[&<>"'\{\}]/g, match=>HTML_CHARS[match]);
+String.prototype.wrap = function(a: string='', b: string=''){
+	if(!this.toString()) return '';
+	return `${escape(a)}${this}${escape(b)}`; //this should already be escaped
+}
 /**
  * TS is a central repository for options. This will also handle code compiling based off a tsconfig
  */
@@ -45,6 +67,7 @@ export default class TS {
 	static typeColor = "rgb(28,128,248)";
 	static refColor = "rgb(0,100,220)";
 	static litColor = "rgb(248, 28, 28)";
+	static nameColor = "rgb(248, 128, 28)";
 	static get style(){
 		return `<style>
 {\`
@@ -66,7 +89,7 @@ h1:not(.ts-doc-header) > a, h2:not(.ts-doc-header) > a, h3:not(.ts-doc-header) >
 .ts-doc-header:hover + *>a:first-of-type>svg {
 	visibility: visible;
 }
-span{
+.ts-doc-header span, .ts-doc-header a{
 	font-size: inherit;
 }
 .ts-doc-kind{
@@ -80,6 +103,9 @@ span{
 }
 .ts-doc-lit{
 	color:${this.litColor}
+}
+.ts-doc-name{
+	color:${this.nameColor}
 }
 \`}
 </style>`
@@ -135,6 +161,10 @@ span{
 	 */
 	static resolvedDocFilePath(url: string): string{
 		return join(this.docs, url.replace(/\//g, '-')+'.mdx');
+	}
+
+	static resolveDocPath(url: string): string{
+		return '/docs/'+url.replace(/[\/\.]/g, '-')+'--docs';
 	}
 
 	/**

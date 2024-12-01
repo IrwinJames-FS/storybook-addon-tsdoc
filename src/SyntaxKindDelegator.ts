@@ -29,7 +29,9 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.TypeLiteral]: Node.isTypeLiteral,
 	[SK.PropertySignature]: Node.isPropertySignature,
 	[SK.MethodSignature]: Node.isMethodSignature,
-	[SK.TypeReference]:Node.isTypeReference
+	[SK.TypeReference]:Node.isTypeReference,
+	[SK.Identifier]: Node.isIdentifier,
+	[SK.TypeParameter]: Node.isTypeParameterDeclaration
 };
 
 export const bySyntax = <T>(node: Node, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Node)=>T): T => {

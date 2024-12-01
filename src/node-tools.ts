@@ -1,4 +1,5 @@
 import { Node } from "ts-morph";
+import TS from "./TS";
 
 interface Nameable extends Node {
 	getName():string
@@ -50,6 +51,18 @@ export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsD
 export const getFamilyName = (node: Node, delim:string=".") => node.getAncestors().map(a=>getName(a)).filter(a=>a).reverse().join(delim);
 
 /**
+ * Gets the source of the node and returns a storybook formatted link to the documentation of said node if the node exists within the scope provided by the entry point.
+ * @param node 
+ */
+export const getDocPath = (node: Node): string | undefined => {
+	const src = node.getSourceFile().getFilePath();
+	const ref = TS.resolveUrl(src)
+	if(!ref) return;
+	const fn = getFullName(node)
+	return TS.resolveDocPath(ref)+(fn ? '#'+fn.toLowerCase():'')
+}
+
+/**
  * Checks to see if the Node is primitive
  * @param node 
  * @returns 
@@ -68,7 +81,5 @@ export const isPrimitive = (node?: Node) => node ? (
 	|| Node.isFalseLiteral(node)
 	|| Node.isLiteralTypeNode(node)
 ): false;
-
-
 
 

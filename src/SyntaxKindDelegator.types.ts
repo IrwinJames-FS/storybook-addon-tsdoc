@@ -1,4 +1,4 @@
-import { ArrayTypeNode, Expression, IntersectionTypeNode, LiteralTypeNode, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, PropertySignature, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, UnionTypeNode } from "ts-morph";
+import { ArrayTypeNode, Expression, Identifier, IntersectionTypeNode, LiteralTypeNode, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, PropertySignature, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode } from "ts-morph";
 import { Nodely } from "./types";
 
 /**
@@ -38,7 +38,9 @@ export interface SyntaxKindTypeMap {
 	[SK.TypeLiteral]: TypeLiteralNode,
 	[SK.PropertySignature]: PropertySignature,
 	[SK.MethodSignature]: MethodSignature,
-	[SK.TypeReference]: TypeReferenceNode
+	[SK.TypeReference]: TypeReferenceNode,
+	[SK.Identifier]: Identifier,
+	[SK.TypeParameter]: TypeParameterDeclaration
 }
 
 export type TypeByKind<T extends keyof SyntaxKindTypeMap> = SyntaxKindTypeMap[T]

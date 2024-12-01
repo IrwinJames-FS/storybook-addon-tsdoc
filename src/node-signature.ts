@@ -29,12 +29,14 @@ It should be noted that vsCode resolves this be resolving destructuring to an an
 I think having a method that better at differenciating such things.
 */
 
-import { getFullName, getName } from "./node-tools"
+import { getDocPath, getFullName, getName } from "./node-tools"
 import { Node } from "ts-morph"
 import TS from "./TS"
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap, SyntaxKindMap } from "./SyntaxKindDelegator.types";
-import { $literal, $name, $type } from "./decorators";
+import { $href, $kind, $literal, $name, $type } from "./decorators";
+
+
 
 /**
  * Evaluates the signature and generates a reduced version of the signature
@@ -55,9 +57,10 @@ const sig = (node: Node) => {
 
 const typingMap: SKindMap<string> = {
 	[SK.TypeAliasDeclaration]: (node, df)=>{
+		const params = node.getTypeParameters()?.map(p=>bySyntax(p, typingMap, df)).join(', ').wrap('<','>') ?? '';
 		const typeNode = node.getTypeNode();
 		if(!typeNode) return df(node)
-		return ': ' + bySyntax(typeNode, typingMap, df);
+		return params+': ' + bySyntax(typeNode, typingMap, df);
 	},
 	[SK.LiteralType]: (node)=>$literal(node.getText()),
 	[SK.TupleType]: (node, df)=>`[${node.getElements().map(e=>bySyntax(e, typingMap, df)).join(', ')}]`,
@@ -65,6 +68,27 @@ const typingMap: SKindMap<string> = {
 	[SK.IntersectionType]: (node, df)=>node.getTypeNodes().map(e=>bySyntax(e, typingMap, df)).join(' & '),
 	[SK.NamedTupleMember]: (node, df)=>`${$name(node.getName())}: ${bySyntax(node.getTypeNode()!, typingMap, df)}`,
 	[SK.ArrayType]: (node, df)=>`${bySyntax(node.getElementTypeNode(), typingMap, df)}[]`,
+	[SK.TypeReference]: (node, df)=>{ //this is a tricky one
+		const typeName = node.getTypeName();
+		const args = node.getTypeArguments();
+		//corner cases
+		if(typeName.getText() === "Array"){
+			return bySyntax(args[0], typingMap, df)+"[]";
+		}
+
+		return bySyntax(typeName, typingMap, df) + (args.length ? `&lt;${args.map(a=>bySyntax(a, typingMap, df)).join(', ')}&gt;`:'')
+	},
+	[SK.Identifier]: (node, df)=>{
+		const def = node.getDefinitionNodes()[0]; //I guess its possible to have multiple definitions but I havent thought of a use case where I would have reference to all definitions in one location (extensions would have a link back to immediate source automatically)
+		if(!def) return $type(node.getText()); //no link
+		const href = getDocPath(def)
+		if(!href) return $type(node.getText()); //link outside scope
+		return $href(node.getText(), href);
+	},
+	[SK.TypeParameter]: (node, df) => {
+		const extension = node.getConstraint()
+		return $name(node.getName()) + (extension ? ' extends ' + bySyntax(extension, typingMap, df):'');
+	}
 }
 /**
  * Once a full signature name is resolved the typing of the object will be necessary. This typing however will be different for different declaration type. As such I will be handling these similar to the SyntaxKind... I need a SyntaxKind switching function
@@ -78,5 +102,6 @@ const typing = (node: Node) => {
  * @param node 
  */
 export const getSignature = (node: Node) => {
+	
 	return `${sig(node)}${typing(node)}`;
 }
