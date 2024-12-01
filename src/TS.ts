@@ -6,8 +6,10 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 
 import { minimatch } from "minimatch";
-import { walk } from "./SKMap";
 import { getSignature } from "./node-signature";
+import { traverse } from "./traverse";
+import { $kind } from "./decorators";
+import { getComments, getFullName } from "./node-tools";
 
 
 
@@ -40,14 +42,44 @@ export default class TS {
 	static renderStyle: 'source' | 'declaration' = 'declaration'; //not supported yet
 
 	static kindColor = "#F08";
+	static typeColor = "rgb(28,128,248)";
+	static refColor = "rgb(0,100,220)";
+	static litColor = "rgb(248, 28, 28)";
 	static get style(){
 		return `<style>
 {\`
+h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
+	height: 0; /* hide without being hidden */
+	padding: 0;
+	margin: 0;
+	font-size:0;
+	border-bottom-width: 0px;
+	position: relative;
+	top: -3rem;
+
+}
+
+h1:not(.ts-doc-header) > a, h2:not(.ts-doc-header) > a, h3:not(.ts-doc-header) > a, h4:not(.ts-doc-header) > a, h5:not(.ts-doc-header) > a, h6:not(.ts-doc-header) > a{
+	margin-top: 1rem;
+}
+
+.ts-doc-header:hover + *>a:first-of-type>svg {
+	visibility: visible;
+}
 span{
 	font-size: inherit;
 }
 .ts-doc-kind{
 	color:${this.kindColor}
+}
+.ts-doc-type{
+	color:${this.typeColor}
+}
+.ts-doc-ref{
+	color:${this.refColor}
+}
+.ts-doc-lit{
+	color:${this.litColor}
 }
 \`}
 </style>`
@@ -129,9 +161,14 @@ span{
 	 */
 	static documentSourceFile(source: SourceFile){
 		let data = ''
-		for(const node of walk(source)){
-			TS.success(node.getKindName());
-			data += `## ${getSignature(node)}
+		for(const [kind, node] of traverse(source)){
+			TS.success(kind, node.getKindName());
+			data += `<h2 className="ts-doc-header">${$kind(kind)} ${getSignature(node)}</h2>
+
+## ${getFullName(node)}
+
+${getComments(node)}
+
 `;
 		}
 		if(!data) return;
@@ -140,7 +177,10 @@ span{
 		
 <Meta title="${path}"/>
 
+[test](/docs/primitives-ts#alt_number_array)
+
 ${data}
+
 
 ${TS.style}`);
 	}

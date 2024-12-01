@@ -1,7 +1,4 @@
-import TS from "./TS";
 import { Node } from "ts-morph";
-import { $kind } from "./decorators";
-import { getSKInfo, SKMap } from "./SKMap";
 
 interface Nameable extends Node {
 	getName():string
@@ -41,8 +38,10 @@ export const getFullName = (node: Node, delim:string=".") => {
  */
 export const getSignatureName = (node:Node, delim:string=".") => {
 	const family = getFamilyName(node, delim);
-	return `<span className="ts-doc-kind">${getKind(node)}</span> ${[family, getName(node)].filter(a=>a).join(delim)}`;
+	return `${[family, getName(node)].filter(a=>a).join(delim)}`;
 }
+
+export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(j=>j.getComment()).join('\n');
 /**
  * Converts the ancestors into a family name.
  * @param node 
@@ -50,16 +49,6 @@ export const getSignatureName = (node:Node, delim:string=".") => {
  */
 export const getFamilyName = (node: Node, delim:string=".") => node.getAncestors().map(a=>getName(a)).filter(a=>a).reverse().join(delim);
 
-
-export const getKind = (node: Node): string | undefined => {
-	//const walker = SyntaxWalkers[node.getKind()];
-	const walker = getSKInfo(node);
-	if(!walker || !walker.kind) {
-		TS.err("Kind not supported", node.getKindName());
-		return;
-	}
-	return $kind(walker.kind);
-}
 /**
  * Checks to see if the Node is primitive
  * @param node 
