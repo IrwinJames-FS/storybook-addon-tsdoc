@@ -29,10 +29,16 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.TypeLiteral]: Node.isTypeLiteral,
 	[SK.PropertySignature]: Node.isPropertySignature,
 	[SK.MethodSignature]: Node.isMethodSignature,
-	[SK.TypeReference]:Node.isTypeReference
+	[SK.TypeReference]:Node.isTypeReference,
+	[SK.Identifier]: Node.isIdentifier,
+	[SK.TypeParameter]: Node.isTypeParameterDeclaration,
+	[SK.Parameter]: Node.isParameterDeclaration,
+	[SK.FunctionType]: Node.isFunctionTypeNode,
+	[SK.ParenthesizedType]: Node.isParenthesizedTypeNode
 };
 
-export const bySyntax = <T>(node: Node, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Node)=>T): T => {
+export const bySyntax = <T>(node: Nodely, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Nodely)=>T): T => {
+	if(!node) return defaultFN(node);
 	const k = node.getKind();
 	if(!(k in SyntaxKindDelegator)) {
 		return defaultFN(node);

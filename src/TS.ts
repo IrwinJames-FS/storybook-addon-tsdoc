@@ -1,7 +1,7 @@
 import { isAbsolute, join } from "path";
 
-import { blueBright, cyan, gray, green, red, yellow } from "console-log-colors";
-import { Project, SourceFile, SyntaxList } from "ts-morph";
+import { blueBright, cyan, green, red, yellow } from "console-log-colors";
+import { Project, SourceFile, } from "ts-morph";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 
@@ -11,8 +11,36 @@ import { traverse } from "./traverse";
 import { $kind } from "./decorators";
 import { getComments, getFullName } from "./node-tools";
 
+declare global {
+	interface String {
+		wrap(a: string, b:string):string
+	}
+}
 
+const HTML_CHARS: Record<string, string> = {
+	"&":"&amp;",
+	"<":"&lt;",
+	">":"&gt;",
+	'"':"&quot;",
+	"'":"&#039;",
+	"{":"&lcub;",
+	"}":"&rcub;"
+}
+const ESC_REG = /[&<>"'\{\}]/g;
+/**
+ * This should be used to avoid errors with acorn... idealy it should be unecessary but for now will be used.
+ * @param text 
+ */
+const escape = (text:string)=>{
+	return text.replace(ESC_REG, match=>HTML_CHARS[match]);
+}
 
+String.prototype.wrap = function(a: string='', b: string=''){
+	if(!this.toString()) return '';
+	a = escape(a);
+	b = escape(b);
+	return `${a}${this}${b}`; //this should already be escaped
+}
 /**
  * TS is a central repository for options. This will also handle code compiling based off a tsconfig
  */
@@ -45,6 +73,7 @@ export default class TS {
 	static typeColor = "rgb(28,128,248)";
 	static refColor = "rgb(0,100,220)";
 	static litColor = "rgb(248, 28, 28)";
+	static nameColor = "rgb(248, 128, 28)";
 	static get style(){
 		return `<style>
 {\`
@@ -63,10 +92,13 @@ h1:not(.ts-doc-header) > a, h2:not(.ts-doc-header) > a, h3:not(.ts-doc-header) >
 	margin-top: 1rem;
 }
 
+h2.ts-doc-header{
+	font-size: 1.25rem;
+}
 .ts-doc-header:hover + *>a:first-of-type>svg {
 	visibility: visible;
 }
-span{
+.ts-doc-header span, .ts-doc-header a{
 	font-size: inherit;
 }
 .ts-doc-kind{
@@ -80,6 +112,9 @@ span{
 }
 .ts-doc-lit{
 	color:${this.litColor}
+}
+.ts-doc-name{
+	color:${this.nameColor}
 }
 \`}
 </style>`
@@ -137,6 +172,10 @@ span{
 		return join(this.docs, url.replace(/\//g, '-')+'.mdx');
 	}
 
+	static resolveDocPath(url: string): string{
+		return '/docs/'+url.replace(/[\/\.]/g, '-')+'--docs';
+	}
+
 	/**
 	 * Create a project (program) and crawl the parsed data.
 	 */
@@ -177,10 +216,7 @@ ${getComments(node)}
 		
 <Meta title="${path}"/>
 
-[test](/docs/primitives-ts#alt_number_array)
-
 ${data}
-
 
 ${TS.style}`);
 	}

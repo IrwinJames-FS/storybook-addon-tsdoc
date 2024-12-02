@@ -10,8 +10,8 @@ export default function(config: {stories:string[]} & Record<string, any>){
 	TS.warn(storyPath);
 	//stories.push(storyPath);
 	//config.stories = stories;
-	TS.document();
 	if(!ran){
+		TS.document();
 		ran = true;
 		return {stories: [storyPath]};
 	} 
