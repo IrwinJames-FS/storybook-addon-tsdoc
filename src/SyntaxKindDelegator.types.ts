@@ -1,4 +1,4 @@
-import { ArrayTypeNode, Expression, Identifier, IntersectionTypeNode, LiteralTypeNode, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, PropertySignature, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode } from "ts-morph";
+import { ArrayTypeNode, Expression, FunctionTypeNode, Identifier, IntersectionTypeNode, LiteralTypeNode, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertySignature, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode } from "ts-morph";
 import { Nodely } from "./types";
 
 /**
@@ -8,7 +8,7 @@ import { Nodely } from "./types";
 export type SyntaxKindValidator<T extends Node> = (node: Nodely) => node is T;
 
 
-export type SyntaxKindDelegateAction<T extends Node, R> = (node: T, defaultFN: (node: Node)=>R) => R
+export type SyntaxKindDelegateAction<T extends Node, R> = (node: T, defaultFN: (node: Nodely)=>R) => R
 /**
  * For the delegator method to work it needs delegates which will know how to consume the generic Node and utilize it as a specialized node based on its syntax Kind. 
  * 
@@ -40,7 +40,10 @@ export interface SyntaxKindTypeMap {
 	[SK.MethodSignature]: MethodSignature,
 	[SK.TypeReference]: TypeReferenceNode,
 	[SK.Identifier]: Identifier,
-	[SK.TypeParameter]: TypeParameterDeclaration
+	[SK.TypeParameter]: TypeParameterDeclaration,
+	[SK.Parameter]: ParameterDeclaration,
+	[SK.FunctionType]: FunctionTypeNode,
+	[SK.ParenthesizedType]: ParenthesizedTypeNode
 }
 
 export type TypeByKind<T extends keyof SyntaxKindTypeMap> = SyntaxKindTypeMap[T]
