@@ -34,7 +34,12 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.TypeParameter]: Node.isTypeParameterDeclaration,
 	[SK.Parameter]: Node.isParameterDeclaration,
 	[SK.FunctionType]: Node.isFunctionTypeNode,
-	[SK.ParenthesizedType]: Node.isParenthesizedTypeNode
+	[SK.ParenthesizedType]: Node.isParenthesizedTypeNode,
+	[SK.ClassDeclaration]: Node.isClassDeclaration,
+	[SK.ExpressionWithTypeArguments]: Node.isExpressionWithTypeArguments,
+	[SK.InterfaceDeclaration]: Node.isInterfaceDeclaration,
+	[SK.MethodDeclaration]: Node.isMethodDeclaration
+	
 };
 
 export const bySyntax = <T>(node: Nodely, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Nodely)=>T): T => {

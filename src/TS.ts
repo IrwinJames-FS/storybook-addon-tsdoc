@@ -10,6 +10,7 @@ import { getSignature } from "./node-signature";
 import { traverse } from "./traverse";
 import { $kind } from "./decorators";
 import { getComments, getFullName } from "./node-tools";
+import { render } from "./renderer";
 
 declare global {
 	interface String {
@@ -77,23 +78,42 @@ export default class TS {
 	static get style(){
 		return `<style>
 {\`
+.ts-doc-header-wrapper{
+	position: relative;
+}
 h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
-	height: 0; /* hide without being hidden */
+	height: 2px; /* hide without being hidden */
 	padding: 0;
 	margin: 0;
 	font-size:0;
 	border-bottom-width: 0px;
-	position: relative;
-	top: -3rem;
-
-}
-
-h1:not(.ts-doc-header) > a, h2:not(.ts-doc-header) > a, h3:not(.ts-doc-header) > a, h4:not(.ts-doc-header) > a, h5:not(.ts-doc-header) > a, h6:not(.ts-doc-header) > a{
-	margin-top: 1rem;
+	position: absolute;
+	background:#F00;
+	top: calc(50% - 8px);
 }
 
 h2.ts-doc-header{
 	font-size: 1.25rem;
+}
+
+h3.ts-doc-header{
+	font-size: 1.2rem;
+}
+
+h4.ts-doc-header{
+	font-size: 1.15rem;
+}
+
+h5.ts-doc-header{
+	font-size: 1.1rem;
+}
+
+h6.ts-doc-header{
+	font-size: 1.05rem;
+}
+
+.ts-doc-header {
+	margin:1rem 0;
 }
 .ts-doc-header:hover + *>a:first-of-type>svg {
 	visibility: visible;
@@ -115,6 +135,10 @@ h2.ts-doc-header{
 }
 .ts-doc-name{
 	color:${this.nameColor}
+}
+.ts-doc-section{
+	position: 'relative';
+	padding-left: 1rem;
 }
 \`}
 </style>`
@@ -199,26 +223,10 @@ h2.ts-doc-header{
 	 * @returns 
 	 */
 	static documentSourceFile(source: SourceFile){
-		let data = ''
-		for(const [kind, node] of traverse(source)){
-			TS.success(kind, node.getKindName());
-			data += `<h2 className="ts-doc-header">${$kind(kind)} ${getSignature(node)}</h2>
-
-## ${getFullName(node)}
-
-${getComments(node)}
-
-`;
-		}
-		if(!data) return;
 		const path = TS.resolveUrl(source.getFilePath())!;
-		return writeFileSync(TS.resolvedDocFilePath(path), `import { Meta } from "@storybook/blocks";
-		
-<Meta title="${path}"/>
-
-${data}
-
-${TS.style}`);
+		const data = render(path, source);
+		if(!data) return;
+		return writeFileSync(TS.resolvedDocFilePath(path), data);
 	}
 
 	static log(...args: unknown[]){

@@ -4,6 +4,7 @@ import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { cyan, green, red } from "console-log-colors";
 import { typelit } from "./constants";
+import { Nodely } from "./types";
 
 interface Nameable extends Node {
 	getName():string
@@ -21,7 +22,7 @@ const hasName = <T extends Node>(node: T): node is T & Nameable => 'getName' in 
  * @param node 
  * @returns 
  */
-export const getName = <T extends Node>(node: T):string => hasName(node) ? node.getName()
+export const getName = <T extends Node>(node: Nodely<T>):string => (node && hasName(node)) ? node.getName()
 :'';
 
 
@@ -46,7 +47,10 @@ export const getSignatureName = (node:Node, delim:string=".") => {
 	return `${[family, getName(node)].filter(a=>a).join(delim)}`;
 }
 
-export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(j=>j.getComment()).join('\n');
+export const getJsDocs = (node: Node) => Node.isJSDocable(node) ? node.getJsDocs():[];
+
+
+export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(j=>j.getComment()).join('\n')+'\n';
 /**
  * Converts the ancestors into a family name.
  * @param node 
@@ -84,6 +88,18 @@ const ModMap: SKindMap<Modificator> = {
 	}
 }
 
+/**
+ * In some cases the named node is the parent node of the evaluated node this just climbs the node tree until it finds a name
+ * @param node 
+ */
+export const getNearestName = (node?: Node) => {
+	let name = getName(node);
+	while (node && !name){
+		node = node.getParent()
+		name = getName(node)
+	}
+	return name;
+}
 
 export const getFName = (node: Node) => {
 	const [pre,post] = bySyntax(node, ModMap, n=>{
@@ -106,10 +122,19 @@ export const getDocPath = (node: Node): string | undefined => {
 	const src = node.getSourceFile().getFilePath();
 	const ref = TS.resolveUrl(src)
 	if(!ref) return;
-	const fn = getFullName(node)
+	const fn = getFullName(node, '')
 	return TS.resolveDocPath(ref)+(fn ? '#'+fn.toLowerCase():'')
 }
 
+export const isMethodLike = (node?: Node): boolean => {
+	if(!node) return false;
+	const k = node.getKind();
+	return new Set<SK>([
+		SK.MethodSignature,
+		SK.MethodDeclaration,
+		SK.FunctionType
+	]).has(k);
+}
 /**
  * Checks to see if the Node is primitive
  * 
@@ -135,7 +160,10 @@ export const isPrimitive = (node?: Node):boolean => {
 		SK.NullKeyword,
 		SK.NeverKeyword,
 		SK.VoidKeyword,
-		SK.UndefinedKeyword
+		SK.UndefinedKeyword,
+		SK.UnknownKeyword,
+		SK.ExportAssignment, //Just to ignore the warning it wont be used at this stage.
+		SK.ImportDeclaration
 	]).has(k);
 }
 
