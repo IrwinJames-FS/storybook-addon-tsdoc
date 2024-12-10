@@ -29,104 +29,99 @@ It should be noted that vsCode resolves this be resolving destructuring to an an
 I think having a method that better at differenciating such things.
 */
 
-import { getDocPath, getFName, getFullName, getName } from "./node-tools"
+import { getDocPath, getFName, getFullName, getName, isPrimitive } from "./node-tools"
 import { Node } from "ts-morph"
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $href, $literal, $name, $type } from "./decorators";
+import { $href, $kind, $literal, $name, $type } from "./decorators";
 import { gray, yellow } from "console-log-colors";
+import { Nodely } from "./types";
+import TS from "./TS";
+import { typelit } from "./constants";
+import { escape } from "querystring";
 
-
-
-/**
- * Evaluates the signature and generates a reduced version of the signature
- * @param node 
- * @param child 
- */
-const collapsedSig = (node: Node, child: Node) => {
-	const name = getName(node);
-	return name;
-}
-/**
- * This method wil be responsible for creating the signature
- * @param node 
- */
-const sig = (node: Node) => {
-	return getFName(node);
-}
 
 const typingMap: SKindMap<string> = {
 	[SK.TypeAliasDeclaration]: (node, df)=>{
-		const params = node.getTypeParameters()?.map(p=>bySyntax(p, typingMap, df)).join(', ').wrap('<','>') ?? '';
+		const params = node.getTypeParameters()?.map(p=>sig(p)).join(', ').wrap('<','>') ?? '';
 		const typeNode = node.getTypeNode();
 		if(!typeNode) return df(node)
-		return params+': ' + bySyntax(typeNode, typingMap, df);
+		return params+': ' + sig(typeNode);
 	},
-	[SK.LiteralType]: (node)=>$literal(node.getText()),
-	[SK.TupleType]: (node, df)=>`[${node.getElements().map(e=>bySyntax(e, typingMap, df)).join(', ')}]`,
-	[SK.UnionType]: (node, df)=>node.getTypeNodes().map(e=>bySyntax(e, typingMap, df)).join(' | '),
-	[SK.IntersectionType]: (node, df)=>node.getTypeNodes().map(e=>bySyntax(e, typingMap, df)).join(' & '),
-	[SK.NamedTupleMember]: (node, df)=>`${$name(node.getName())}: ${bySyntax(node.getTypeNode()!, typingMap, df)}`,
-	[SK.ArrayType]: (node, df)=>`${bySyntax(node.getElementTypeNode(), typingMap, df)}[]`,
-	[SK.TypeReference]: (node, df)=>{ //this is a tricky one
+	[SK.LiteralType]: node=>$literal(node.getText()),
+	[SK.TupleType]: node=>`[${node.getElements().map(e=>sig(e)).join(', ')}]`,
+	[SK.UnionType]: node=>node.getTypeNodes().map(e=>sig(e)).join(' | '),
+	[SK.IntersectionType]: node=>node.getTypeNodes().map(e=>sig(e)).join(' & '),
+	[SK.NamedTupleMember]: node=>`${$name(node.getName())}: ${sig(node.getTypeNode()!)}`,
+	[SK.ArrayType]: node=>`${sig(node.getElementTypeNode())}[]`,
+	[SK.TypeReference]: node=>{ //this is a tricky one
 		const typeName = node.getTypeName();
 		const args = node.getTypeArguments();
 		//corner cases
 		if(typeName.getText() === "Array"){
-			return bySyntax(args[0], typingMap, df)+"[]";
+			return sig(args[0])+"[]";
 		}
 
-		return bySyntax(typeName, typingMap, df) + (args.length ? args.map(a=>bySyntax(a, typingMap, df)).join(', ').wrap('<','>'):'')
+		return sig(typeName) + (args.length ? args.map(a=>sig(a)).join(', ').wrap('<','>'):'')
 	},
-	[SK.Identifier]: (node, df)=>{
+	[SK.Identifier]: node=>{
 		const def = node.getDefinitionNodes()[0]; //I guess its possible to have multiple definitions but I havent thought of a use case where I would have reference to all definitions in one location (extensions would have a link back to immediate source automatically)
 		if(!def) return $type(node.getText()); //no link
 		const href = getDocPath(def)
 		if(!href) return $type(node.getText()); //link outside scope
 		return $href(node.getText(), href);
 	},
-	[SK.TypeParameter]: (node, df) => {
+	[SK.TypeParameter]: node => {
 		const extension = node.getConstraint()
-		return $name(node.getName()) + (extension ? ' extends ' + bySyntax(extension, typingMap, df):'');
+		return $name(node.getName()) + (extension ? ' extends ' + sig(extension):'');
 	},
 	[SK.TypeLiteral]: ()=>$type('&lcub;...&rcub;'),
-	[SK.PropertySignature]: (node, df)=>{
-		return ': '+ bySyntax(node.getTypeNode(), typingMap, df);
+	[SK.PropertySignature]: node=>sig(node.getTypeNode()),
+	[SK.MethodSignature]: node=>{
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}): ${sig(node.getReturnTypeNode())}`;
 	},
-	[SK.MethodSignature]: (node, df)=>{
-		return `(${node.getParameters().map(p=>bySyntax(p, typingMap, df)).join(', ')}): ${bySyntax(node.getReturnTypeNode(), typingMap, df)}`;
-	},
-	[SK.Parameter]: (node, df)=>{
-		const nameNode = node.getNameNode();
+	[SK.Parameter]: node=>{
 		const typeNode = node.getTypeNode();
-		console.log(nameNode.getKindName());
-		return `${$name(nameNode.getText())}: ${bySyntax(typeNode, typingMap, df)}`;
+		const initializer = sig(node.getInitializer());
+		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${sig(typeNode)}${initializer ? ' = '+initializer:''}`;
 	},
-	[SK.FunctionType]: (node, df)=>{
-		return `(${node.getParameters().map(p=>bySyntax(p, typingMap, df)).join(', ')}) =&gt; ${bySyntax(node.getReturnTypeNode(), typingMap, df)}`;
+	[SK.ArrayLiteralExpression]: node=>'[]',
+	[SK.FunctionType]: node=>{
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
 	},
-	[SK.ParenthesizedType]: (node, df)=>`(${bySyntax(node.getTypeNode(), typingMap, df)})`,
-	
+	[SK.MethodDeclaration]: node=>{
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
+	},
+	[SK.ParenthesizedType]: node=>`(${sig(node.getTypeNode())})`,
+	[SK.ClassDeclaration]: node=>{
+		const extensions = sig(node.getExtends());
+		const implementions = node.getImplements().map(i=>sig(i)).join(', ');
+		console.log(node.getImplements().length);
+		return `${extensions ? ' extends '+ extensions:''}${implementions ? ' implements ' + implementions:''}`
+	},
+	[SK.ExpressionWithTypeArguments]: node=>{
+		const args = node.getTypeArguments().map(a=>sig(a)).join(', ');
+		return `${sig(node.getExpression())}${args.wrap('<','>')}`
+	},
+	[SK.InterfaceDeclaration]: node=>$literal(typelit),
+	[SK.Constructor]: node=>`${$type("new")} (${node.getParameters().map(p=>sig(p)).join(', ')})=>${$type(getName(node.getParent()))}`,
+	[SK.GetAccessor]: node=> sig(node.getReturnTypeNode()),
+	[SK.SetAccessor]: node=> node.getParameters().map(p=>sig(p)).join(', '),
+	[SK.ConditionalType]: node => {
+		
+		return `${sig(node.getCheckType())} extends ${sig(node.getExtendsType())} ? ${sig(node.getTrueType())}<br/>: ${sig(node.getFalseType())}`;
+	},
+	[SK.VariableDeclaration]: node=>sig(node.getTypeNode())
 }
+const defSig = (n: Nodely)=>{
+	if(!n) return '';
+	if(isPrimitive(n)) return $type(n.getText());
+	TS.err("Signature Missing type", yellow(n.getKindName()), gray(getFullName(n)));
+	return $type(n.getText())
+}
+const sig = (node: Nodely) => bySyntax(node, typingMap, defSig);
 /**
  * Once a full signature name is resolved the typing of the object will be necessary. This typing however will be different for different declaration type. As such I will be handling these similar to the SyntaxKind... I need a SyntaxKind switching function
  * @param node 
  */
-const typing = (node: Node) => {
-	return bySyntax(node, typingMap, n=>{
-		if(!n) return '';
-		console.log("Missing type", yellow(n.getKindName()), gray(getFullName(n)))
-		return $type(n.getText())
-	});
-}
-
-const SigMap: SKindMap<string> = {
-	[SK.TypeParameter]: (node)=>`${sig}`
-}
-/**
- * Traverse the nodes leading to this node and create a styled name using special notation.
- * @param node 
- */
-export const getSignature = (node: Node) => {
-	return bySyntax(node, SigMap, ()=>`${sig(node)}${typing(node)}`);
-}
+export const getSignature = (node: Nodely) => sig(node);

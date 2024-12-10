@@ -1,5 +1,5 @@
 import { SyntaxKindDelegateAction, SyntaxKindMap, SyntaxKindTypeMap, SyntaxKindValidator, SyntaxKindValidatorMap, TypeByKind } from "./SyntaxKindDelegator.types";
-import { Node, SyntaxKind as SK } from "ts-morph";
+import { ConstructorTypeNode, Node, SyntaxKind as SK } from "ts-morph";
 import { Nodely } from "./types";
 import TS from "./TS";
 
@@ -34,7 +34,20 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.TypeParameter]: Node.isTypeParameterDeclaration,
 	[SK.Parameter]: Node.isParameterDeclaration,
 	[SK.FunctionType]: Node.isFunctionTypeNode,
-	[SK.ParenthesizedType]: Node.isParenthesizedTypeNode
+	[SK.ParenthesizedType]: Node.isParenthesizedTypeNode,
+	[SK.ClassDeclaration]: Node.isClassDeclaration,
+	[SK.ExpressionWithTypeArguments]: Node.isExpressionWithTypeArguments,
+	[SK.InterfaceDeclaration]: Node.isInterfaceDeclaration,
+	[SK.MethodDeclaration]: Node.isMethodDeclaration,
+	[SK.PropertyDeclaration]: Node.isPropertyDeclaration,
+	[SK.Constructor]: Node.isConstructorDeclaration,
+	[SK.ArrayLiteralExpression]: Node.isArrayLiteralExpression,
+	[SK.ClassStaticBlockDeclaration]: Node.isClassStaticBlockDeclaration,
+	[SK.GetAccessor]: Node.isGetAccessorDeclaration,
+	[SK.SetAccessor]: Node.isSetAccessorDeclaration,
+	[SK.ConditionalType]: Node.isConditionalTypeNode,
+	[SK.VariableStatement]: Node.isVariableStatement,
+	[SK.VariableDeclaration]: Node.isVariableDeclaration
 };
 
 export const bySyntax = <T>(node: Nodely, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Nodely)=>T): T => {
