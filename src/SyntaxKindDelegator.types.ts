@@ -1,4 +1,4 @@
-import { ArrayTypeNode, ClassDeclaration, Expression, ExpressionWithTypeArguments, FunctionTypeNode, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertySignature, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode } from "ts-morph";
+import { ArrayLiteralExpression, ArrayTypeNode, ClassDeclaration, ClassStaticBlockDeclaration, ConditionalTypeNode, Constructor, ConstructorDeclaration, ConstructorTypeNode, Expression, ExpressionWithTypeArguments, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertyDeclaration, PropertySignature, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { Nodely } from "./types";
 
 /**
@@ -17,7 +17,7 @@ export type SyntaxKindDelegateAction<T extends Node, R> = (node: T, defaultFN: S
 export interface SyntaxKindDelegate<T extends Node> {
 	validate: SyntaxKindValidator<T>
 }
-export interface SyntaxKindTypeMap {
+export interface SyntaxKindTypeMap<T=never> {
 	[SK.SourceFile]: SourceFile
 	[SK.SyntaxList]: SyntaxList
 	[SK.TypeAliasDeclaration]: TypeAliasDeclaration,
@@ -48,7 +48,16 @@ export interface SyntaxKindTypeMap {
 	[SK.ClassDeclaration]: ClassDeclaration,
 	[SK.ExpressionWithTypeArguments]: ExpressionWithTypeArguments,
 	[SK.InterfaceDeclaration]: InterfaceDeclaration,
-	[SK.MethodDeclaration]: MethodDeclaration
+	[SK.MethodDeclaration]: MethodDeclaration,
+	[SK.PropertyDeclaration]: PropertyDeclaration,
+	[SK.Constructor]: ConstructorDeclaration,
+	[SK.ArrayLiteralExpression]: ArrayLiteralExpression,
+	[SK.ClassStaticBlockDeclaration]: ClassStaticBlockDeclaration,
+	[SK.GetAccessor]: GetAccessorDeclaration,
+	[SK.SetAccessor]: SetAccessorDeclaration,
+	[SK.ConditionalType]: ConditionalTypeNode,
+	[SK.VariableStatement]: VariableStatement,
+	[SK.VariableDeclaration]: VariableDeclaration
 }
 
 export type TypeByKind<T extends keyof SyntaxKindTypeMap> = SyntaxKindTypeMap[T]

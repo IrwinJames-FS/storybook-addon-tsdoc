@@ -1,11 +1,11 @@
-import { Node, ParameterDeclaration, SourceFile, TypeParameterDeclaration } from "ts-morph";
+import { Node, ParameterDeclaration, PropertyDeclaration, SourceFile, TypeParameterDeclaration } from "ts-morph";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $h, $kd, $section } from "./decorators";
-import { red } from "console-log-colors";
-import { getComments, isMethodLike, isPrimitive } from "./node-tools";
+import { cyan, red, yellow } from "console-log-colors";
+import { getComments, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
 import { getSignature } from "./node-signature";
 
 const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
@@ -62,14 +62,8 @@ const RENDER_MAP: SKindMap<string> = {
 		)
 	},
 	[SK.TypeLiteral]: node => {
-		const properties: Node[] = [];
-		const methods: Node[] = [];
-		for(const nds of node.getProperties()){
-			const tn = nds.getTypeNode();
-			if(isMethodLike(nds.getTypeNode())) methods.push(nds);
-			else properties.push(nds);
-		}
-		methods.push(...node.getMethods());
+		const properties = node.getProperties();
+		const methods = node.getMethods();
 		let data = '';
 		if(properties.length) data += $h(5, undefined, 'Properties:') + `
 ${build(...properties)}`;
@@ -81,7 +75,16 @@ ${build(...methods)}`;
 		const tn = node.getTypeNode();
 		const typed = build(tn);
 		return block(
-			$h(4, node, isMethodLike(tn) ? $kd`method`:$kd`property`, node.getName(), ':', getSignature(tn)),
+			$h(4, node, $kd`${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
+			getComments(node),
+			typed ? $section(typed):''
+		);
+	},
+	[SK.PropertyDeclaration]: node=>{
+		const tn = node.getTypeNode();
+		const typed = build(tn);
+		return block(
+			$h(4, node, $kd`${node.isStatic() ? 'static ':''}${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
 			getComments(node),
 			typed ? $section(typed):''
 		);
@@ -109,7 +112,7 @@ ${build(...methods)}`;
 	},
 	[SK.MethodDeclaration]: node=>{
 		return block(
-			$h(4, node, $kd`method`, node.getName(), ':', getSignature(node)),
+			$h(4, node, $kd`${node.isStatic() ? 'static ':''}method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
 			...renderFNDetails(
 				node.getTypeParameters(),
@@ -138,21 +141,12 @@ ${build(...methods)}`;
 	[SK.IntersectionType]: node => build(...node.getTypeNodes()),
 	[SK.ArrayType]: node => build(node.getElementTypeNode()),
 	[SK.ClassDeclaration]:node => {
-		const extension = build(node.getExtends());
-		const implementsions = build(...node.getImplements());
-		const properties: Node[] = [];
-		const methods: Node[] = [];
-		for(const nds of node.getProperties()){
-			const tn = nds.getTypeNode();
-			if(isMethodLike(nds.getTypeNode())) methods.push(nds);
-			else properties.push(nds);
-		}
-		methods.push(...node.getMethods());
-		let data = '';
-		if(properties.length) data += $h(5, undefined, 'Properties:') + `
-${build(...properties)}`;
-		if(methods.length) data += $h(5, undefined, 'Methods:') + `
-${build(...methods)}`;
+		const constructors = build(...node.getConstructors());
+		const staticBlocks = build(...node.getStaticBlocks());
+		const staticProperties = build(...node.getStaticProperties());
+		const staticMethods = build(...node.getStaticMethods());
+		const instanceProperties = build(...node.getInstanceProperties());
+		const instanceMethods = build(...node.getInstanceMethods());
 		return block(
 			$h(
 				2, 
@@ -161,14 +155,32 @@ ${build(...methods)}`;
 				node.getName(),
 				getSignature(node)
 			),
-			$section(extension),
-			$section(implementsions),
-			$section(data)
+			getComments(node),
+			$section(
+				constructors,
+				staticBlocks,
+				staticProperties,
+				staticMethods,
+				instanceProperties,
+				instanceMethods
+			)
 		)
 	},
+	[SK.ClassStaticBlockDeclaration]: node=>{
+		const comments = getComments(node).trim();
+		return comments ? block(
+			$h(4, undefined, $kd`static block:`),
+			comments
+		):''
+	},
+	[SK.Constructor]: node=>block(
+		$h(4, node, $kd`constructor`, getSignature(node)),
+		getComments(node)
+	),
 	[SK.InterfaceDeclaration]: node=>{
 		const typeParams = build(...node.getTypeParameters());
-		const extensions = build(...node.getExtends())
+		const extensions = build(...node.getExtends());
+		
 		const properties: Node[] = [];
 		const methods: Node[] = [];
 		for(const nds of node.getProperties()){
@@ -199,19 +211,45 @@ ${build(...methods)}`;
 	},
 	[SK.ExpressionWithTypeArguments]: node=>{
 		return build(...node.getTypeArguments())
+	},
+	[SK.GetAccessor]: node=>{
+		return block(
+			$h(4, node, $kd`${node.isStatic() ? 'static ':''}get`, getName(node), ':', getSignature(node))
+		)
+	},
+	[SK.SetAccessor]: node=>{
+		return block(
+			$h(4, node, $kd`${node.isStatic() ? 'static ':''}set`, getName(node), ':', getSignature(node))
+		)
+	},
+	[SK.ConditionalType]: node=>build(node.getExtendsType(), node.getTrueType(), node.getFalseType()),
+	[SK.VariableStatement]: node => {
+		return build(...node.getDeclarations())
+	},
+	[SK.VariableDeclaration]: node => {
+		const statement = node.getVariableStatement();
+		
+		if(!statement) return '';
+		const dk = statement.getDeclarationKind();
+		return block(
+			$h(4, node, $kd`${dk}`, getName(node), ':', getSignature(node)),
+			getComments(statement)
+		)
 	}
 };
 
 
-export const build = (...nodes: Nodely[]) => nodes.map(node=>bySyntax(node, RENDER_MAP, n=>{
-	if(!n || isPrimitive(n)) return '';
-	TS.err("No support", red(n.getKindName()));
-	return '';
-})).join('\n');
+export const build = (...nodes: Nodely[]) => nodes.map(node=>{
+	if(!TS.documentPrivate && isPrivate(node)) return '';
+	return bySyntax(node, RENDER_MAP, n=>{
+		if(!n || isPrimitive(n)) return '';
+		TS.err("No support", red(n.getKindName()), cyan(n.getKind()));
+		return '';
+})}).filter(b=>b).join('\n');
 
 export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
 	if(!n || isPrimitive(n)) return '';
-	TS.err("No support", red(n.getKindName()));
+	TS.err("No support", red(n.getKindName()), yellow(n.getKind()));
 	return '';
 }) => bySyntax(node, RENDER_MAP, df);
 

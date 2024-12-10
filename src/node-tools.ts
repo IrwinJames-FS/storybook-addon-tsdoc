@@ -9,6 +9,20 @@ import { Nodely } from "./types";
 interface Nameable extends Node {
 	getName():string
 }
+
+/**
+ * Because there isnt a standard way to mark something private.
+ * @param node 
+ * @returns 
+ */
+export const isPrivate = (node: Nodely) => {
+	if(!node) return true; //must be private its so private it doesnt exist.
+
+	//check if the node has a private modifier (typescript syntax sugar)
+	return (Node.isModifierable(node) && node.hasModifier(SK.PrivateKeyword))
+	//check if there is a private tag in jsdocs
+	|| (Node.isJSDocable(node) && node.getJsDocs().some(d=>d.getTags().some(t=>t.getTagName().toLowerCase() === 'private')))
+}
 /**
  * Check if a node has getName method
  * @param node 

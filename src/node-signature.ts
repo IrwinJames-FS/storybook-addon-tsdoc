@@ -33,11 +33,12 @@ import { getDocPath, getFName, getFullName, getName, isPrimitive } from "./node-
 import { Node } from "ts-morph"
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $href, $literal, $name, $type } from "./decorators";
+import { $href, $kind, $literal, $name, $type } from "./decorators";
 import { gray, yellow } from "console-log-colors";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { typelit } from "./constants";
+import { escape } from "querystring";
 
 
 const typingMap: SKindMap<string> = {
@@ -81,13 +82,15 @@ const typingMap: SKindMap<string> = {
 	},
 	[SK.Parameter]: node=>{
 		const typeNode = node.getTypeNode();
-		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${sig(typeNode)}`;
+		const initializer = sig(node.getInitializer());
+		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${sig(typeNode)}${initializer ? ' = '+initializer:''}`;
 	},
+	[SK.ArrayLiteralExpression]: node=>'[]',
 	[SK.FunctionType]: node=>{
-		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode())}`;
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
 	},
 	[SK.MethodDeclaration]: node=>{
-		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode())}`;
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
 	},
 	[SK.ParenthesizedType]: node=>`(${sig(node.getTypeNode())})`,
 	[SK.ClassDeclaration]: node=>{
@@ -100,7 +103,15 @@ const typingMap: SKindMap<string> = {
 		const args = node.getTypeArguments().map(a=>sig(a)).join(', ');
 		return `${sig(node.getExpression())}${args.wrap('<','>')}`
 	},
-	[SK.InterfaceDeclaration]: node=>$literal(typelit)
+	[SK.InterfaceDeclaration]: node=>$literal(typelit),
+	[SK.Constructor]: node=>`${$type("new")} (${node.getParameters().map(p=>sig(p)).join(', ')})=>${$type(getName(node.getParent()))}`,
+	[SK.GetAccessor]: node=> sig(node.getReturnTypeNode()),
+	[SK.SetAccessor]: node=> node.getParameters().map(p=>sig(p)).join(', '),
+	[SK.ConditionalType]: node => {
+		
+		return `${sig(node.getCheckType())} extends ${sig(node.getExtendsType())} ? ${sig(node.getTrueType())}<br/>: ${sig(node.getFalseType())}`;
+	},
+	[SK.VariableDeclaration]: node=>sig(node.getTypeNode())
 }
 const defSig = (n: Nodely)=>{
 	if(!n) return '';

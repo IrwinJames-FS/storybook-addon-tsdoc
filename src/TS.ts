@@ -6,10 +6,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 
 import { minimatch } from "minimatch";
-import { getSignature } from "./node-signature";
-import { traverse } from "./traverse";
-import { $kind } from "./decorators";
-import { getComments, getFullName } from "./node-tools";
 import { render } from "./renderer";
 
 declare global {
@@ -69,7 +65,7 @@ export default class TS {
 	static shouldClearDocsOnStart: boolean = true
 
 	static renderStyle: 'source' | 'declaration' = 'declaration'; //not supported yet
-
+	static documentPrivate: boolean = false;
 	static kindColor = "#F08";
 	static typeColor = "rgb(28,128,248)";
 	static refColor = "rgb(0,100,220)";
@@ -224,6 +220,8 @@ h6.ts-doc-header{
 	 */
 	static documentSourceFile(source: SourceFile){
 		const path = TS.resolveUrl(source.getFilePath())!;
+		TS.log("Documenting", path, source.getFilePath());
+		if(!path) return;
 		const data = render(path, source);
 		if(!data) return;
 		return writeFileSync(TS.resolvedDocFilePath(path), data);

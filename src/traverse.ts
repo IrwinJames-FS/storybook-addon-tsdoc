@@ -31,7 +31,10 @@ const Traversals: SKindMap<Traveler> = {
 	[SK.NamedTupleMember]: node=>({children: [node.getTypeNode()]}),
 	[SK.Identifier]: node=>({}),
 	[SK.TypeParameter]: node=>({children:[node.getConstraint()]}),
-	[SK.ParenthesizedType]: node=>({children: [node.getTypeNode()]})
+	[SK.ParenthesizedType]: node=>({children: [node.getTypeNode()]}),
+	[SK.ConditionalType]: node=>({children: [node.getExtendsType(), node.getTrueType(), node.getFalseType()]}),
+	[SK.VariableStatement]: node=>({children: node.getDeclarations()})
+
 }
 /**
  * Traverse sources by syntax
