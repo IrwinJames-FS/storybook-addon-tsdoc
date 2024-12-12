@@ -47,7 +47,9 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.SetAccessor]: Node.isSetAccessorDeclaration,
 	[SK.ConditionalType]: Node.isConditionalTypeNode,
 	[SK.VariableStatement]: Node.isVariableStatement,
-	[SK.VariableDeclaration]: Node.isVariableDeclaration
+	[SK.VariableDeclaration]: Node.isVariableDeclaration,
+	[SK.FunctionExpression]: Node.isFunctionExpression,
+	[SK.ArrowFunction]: Node.isArrowFunction
 };
 
 export const bySyntax = <T>(node: Nodely, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Nodely)=>T): T => {
