@@ -29,8 +29,8 @@ It should be noted that vsCode resolves this be resolving destructuring to an an
 I think having a method that better at differenciating such things.
 */
 
-import { getDocPath, getFName, getFullName, getName, isPrimitive } from "./node-tools"
-import { Node } from "ts-morph"
+import { getDocPath, getFName, getFullName, getName, getTypeNode, isPrimitive } from "./node-tools"
+import { Node, Type, TypedNode } from "ts-morph"
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $href, $kind, $literal, $name, $type } from "./decorators";
@@ -38,15 +38,19 @@ import { gray, yellow } from "console-log-colors";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { typelit } from "./constants";
-import { escape } from "querystring";
 
 
+const fromTypeNode = (node: Node): string => {
+	const tn = getTypeNode(node);
+	return tn ? sig(tn)
+	: getSignatureFromType(node) ?? ''
+}
 const typingMap: SKindMap<string> = {
 	[SK.TypeAliasDeclaration]: (node, df)=>{
 		const params = node.getTypeParameters()?.map(p=>sig(p)).join(', ').wrap('<','>') ?? '';
-		const typeNode = node.getTypeNode();
+		const typeNode = fromTypeNode(node)
 		if(!typeNode) return df(node)
-		return params+': ' + sig(typeNode);
+		return params+': ' + typeNode;
 	},
 	[SK.LiteralType]: node=>$literal(node.getText()),
 	[SK.TupleType]: node=>`[${node.getElements().map(e=>sig(e)).join(', ')}]`,
@@ -76,14 +80,14 @@ const typingMap: SKindMap<string> = {
 		return $name(node.getName()) + (extension ? ' extends ' + sig(extension):'');
 	},
 	[SK.TypeLiteral]: ()=>$type('&lcub;...&rcub;'),
-	[SK.PropertySignature]: node=>sig(node.getTypeNode()),
+	[SK.PropertySignature]: fromTypeNode,
 	[SK.MethodSignature]: node=>{
 		return `(${node.getParameters().map(p=>sig(p)).join(', ')}): ${sig(node.getReturnTypeNode())}`;
 	},
 	[SK.Parameter]: node=>{
-		const typeNode = node.getTypeNode();
+		const typeNode = fromTypeNode(node);
 		const initializer = sig(node.getInitializer());
-		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${sig(typeNode)}${initializer ? ' = '+initializer:''}`;
+		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${typeNode}${initializer ? ' = '+initializer:''}`;
 	},
 	[SK.ArrayLiteralExpression]: node=>'[]',
 	[SK.FunctionType]: node=>{
@@ -92,11 +96,10 @@ const typingMap: SKindMap<string> = {
 	[SK.MethodDeclaration]: node=>{
 		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
 	},
-	[SK.ParenthesizedType]: node=>`(${sig(node.getTypeNode())})`,
+	[SK.ParenthesizedType]: node=>`(${fromTypeNode(node)})`,
 	[SK.ClassDeclaration]: node=>{
 		const extensions = sig(node.getExtends());
 		const implementions = node.getImplements().map(i=>sig(i)).join(', ');
-		console.log(node.getImplements().length);
 		return `${extensions ? ' extends '+ extensions:''}${implementions ? ' implements ' + implementions:''}`
 	},
 	[SK.ExpressionWithTypeArguments]: node=>{
@@ -105,13 +108,16 @@ const typingMap: SKindMap<string> = {
 	},
 	[SK.InterfaceDeclaration]: node=>$literal(typelit),
 	[SK.Constructor]: node=>`${$type("new")} (${node.getParameters().map(p=>sig(p)).join(', ')})=>${$type(getName(node.getParent()))}`,
-	[SK.GetAccessor]: node=> sig(node.getReturnTypeNode()),
+	[SK.GetAccessor]: node=> {
+		const rtn = node.getReturnTypeNode();
+		return rtn ? sig(rtn)
+		: getSignatureFromType(node) ?? ''
+	},
 	[SK.SetAccessor]: node=> node.getParameters().map(p=>sig(p)).join(', '),
 	[SK.ConditionalType]: node => {
-		
 		return `${sig(node.getCheckType())} extends ${sig(node.getExtendsType())} ? ${sig(node.getTrueType())}<br/>: ${sig(node.getFalseType())}`;
 	},
-	[SK.VariableDeclaration]: node=>sig(node.getTypeNode())
+	[SK.VariableDeclaration]: fromTypeNode
 }
 const defSig = (n: Nodely)=>{
 	if(!n) return '';
@@ -119,9 +125,20 @@ const defSig = (n: Nodely)=>{
 	TS.err("Signature Missing type", yellow(n.getKindName()), gray(getFullName(n)));
 	return $type(n.getText())
 }
+
 const sig = (node: Nodely) => bySyntax(node, typingMap, defSig);
 /**
  * Once a full signature name is resolved the typing of the object will be necessary. This typing however will be different for different declaration type. As such I will be handling these similar to the SyntaxKind... I need a SyntaxKind switching function
  * @param node 
  */
 export const getSignature = (node: Nodely) => sig(node);
+
+export const isPrimitiveType = (t: Type) => t.isAny() || t.isBigInt() || t.isNumber() || t.isBoolean() || t.isString() || t.isNever() || t.isUndefined() || t.isUnknown() || t.isNull();
+
+export const fromType = (t: Type) => isPrimitiveType(t) ? $type(t.getText())
+: '';
+export const getSignatureFromType = (node: Nodely) => {
+	if(!node) return;
+	const t = node.getType();
+	return '';
+}
