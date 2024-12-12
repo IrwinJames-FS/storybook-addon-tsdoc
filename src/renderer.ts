@@ -5,7 +5,7 @@ import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $h, $kd, $section } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { getComments, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
+import { getComments, getExample, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
 import { getSignature } from "./node-signature";
 
 const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
@@ -47,6 +47,7 @@ const RENDER_MAP: SKindMap<string> = {
 		return block(
 			$h(2, node, $kd`type`, node.getName()+`${args.length ? '&lt;'+args.map(a=>getSignature(a)).join(', ')+'&gt;':''}`, ':', getSignature(tn)),
 			getComments(node),
+			getExample(node),
 			tArgs ? $section(tArgs):'',
 			typed ? $section(typed):''
 		);
@@ -58,6 +59,7 @@ const RENDER_MAP: SKindMap<string> = {
 		return block(
 			$h(4, node, $kd`tuple item`, node.getName(), ':', getSignature(tn)),
 			getComments(node),
+			getExample(node),
 			typed ? $section(typed):''
 		)
 	},
@@ -77,6 +79,7 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
 			getComments(node),
+			getExample(node),
 			typed ? $section(typed):''
 		);
 	},
@@ -86,6 +89,7 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`${node.isStatic() ? 'static ':''}${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
 			getComments(node),
+			getExample(node),
 			typed ? $section(typed):''
 		);
 	},
@@ -93,6 +97,7 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
+			getExample(node),
 			...renderFNDetails(
 				node.getTypeParameters(),
 				node.getParameters(),
@@ -114,6 +119,7 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`${node.isStatic() ? 'static ':''}method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
+			getExample(node),
 			...renderFNDetails(
 				node.getTypeParameters(),
 				node.getParameters(),
@@ -124,7 +130,8 @@ ${build(...methods)}`;
 	[SK.Parameter]: node=>{
 		return block(
 			$h(4, node, $kd`argument`, getSignature(node)),
-			getComments(node)
+			getComments(node),
+			getExample(node)
 		)
 	},
 	[SK.TypeParameter]: node=>{
@@ -133,6 +140,7 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`param`, getSignature(node)),
 			getComments(node),
+			getExample(node),
 			constraint ? $section(constraint):''
 		)
 	},
@@ -156,6 +164,7 @@ ${build(...methods)}`;
 				getSignature(node)
 			),
 			getComments(node),
+			getExample(node),
 			$section(
 				constructors,
 				staticBlocks,
@@ -170,12 +179,14 @@ ${build(...methods)}`;
 		const comments = getComments(node).trim();
 		return comments ? block(
 			$h(4, undefined, $kd`static block:`),
-			comments
+			comments,
+			getExample(node)
 		):''
 	},
 	[SK.Constructor]: node=>block(
 		$h(4, node, $kd`constructor`, getSignature(node)),
-		getComments(node)
+		getComments(node),
+		getExample(node)
 	),
 	[SK.InterfaceDeclaration]: node=>{
 		const typeParams = build(...node.getTypeParameters());
@@ -233,7 +244,8 @@ ${build(...methods)}`;
 		const dk = statement.getDeclarationKind();
 		return block(
 			$h(4, node, $kd`${dk}`, getName(node), ':', getSignature(node)),
-			getComments(statement)
+			getComments(statement),
+			getExample(statement)
 		)
 	}
 };

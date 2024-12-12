@@ -2,9 +2,9 @@ import { Node } from "ts-morph";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { cyan, green, red } from "console-log-colors";
-import { typelit } from "./constants";
+import { cyan, green } from "console-log-colors";
 import { Nodely } from "./types";
+import { createPrinter, createSourceFile, ScriptKind, ScriptTarget } from "typescript";
 
 interface Nameable extends Node {
 	getName():string
@@ -102,6 +102,9 @@ const ModMap: SKindMap<Modificator> = {
 	}
 }
 
+export const getTypeNode = (node?: Node) => Node.isTyped(node) ? node.getTypeNode()
+	: (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node)) ? node.getInitializer()
+	: undefined;
 /**
  * In some cases the named node is the parent node of the evaluated node this just climbs the node tree until it finds a name
  * @param node 
@@ -181,4 +184,11 @@ export const isPrimitive = (node?: Node):boolean => {
 	]).has(k);
 }
 
+export const getExample = (node: Node) => {
+	const examples = getJsDocs(node).flatMap(d=>d.getTags().filter(t=>t.getTagName()==="example").map(t=>t.getComment() as string));
+	return examples.map(renderCode).join('\n');
+}
+
+
+export const renderCode = (code: string) => `\`\`\`ts\n${createPrinter({removeComments: false}).printFile(createSourceFile("t.ts", code, ScriptTarget.Latest, false, ScriptKind.TS))}\n\`\`\``;
 
