@@ -103,7 +103,7 @@ const ModMap: SKindMap<Modificator> = {
 }
 
 export const getTypeNode = (node?: Node) => Node.isTyped(node) ? node.getTypeNode()
-	: (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node)) ? node.getInitializer()
+	//: (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node)) ? node.getInitializer()
 	: undefined;
 /**
  * In some cases the named node is the parent node of the evaluated node this just climbs the node tree until it finds a name

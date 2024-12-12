@@ -96,6 +96,9 @@ const typingMap: SKindMap<string> = {
 	[SK.MethodDeclaration]: node=>{
 		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
 	},
+	[SK.ArrowFunction]: node=>{
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
+	},
 	[SK.ParenthesizedType]: node=>`(${fromTypeNode(node)})`,
 	[SK.ClassDeclaration]: node=>{
 		const extensions = sig(node.getExtends());
@@ -117,7 +120,16 @@ const typingMap: SKindMap<string> = {
 	[SK.ConditionalType]: node => {
 		return `${sig(node.getCheckType())} extends ${sig(node.getExtendsType())} ? ${sig(node.getTrueType())}<br/>: ${sig(node.getFalseType())}`;
 	},
-	[SK.VariableDeclaration]: fromTypeNode
+	[SK.VariableDeclaration]: node => {
+		const tn = fromTypeNode(node);
+		if(tn) return tn;
+		const init = node.getInitializer();
+		return sig(init);
+	},
+
+	[SK.FunctionExpression]: node => {
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
+	}
 }
 const defSig = (n: Nodely)=>{
 	if(!n) return '';
@@ -139,6 +151,7 @@ export const fromType = (t: Type) => isPrimitiveType(t) ? $type(t.getText())
 : '';
 export const getSignatureFromType = (node: Nodely) => {
 	if(!node) return;
-	const t = node.getType();
+	//const t = node.getType();
+	//console.log(t.getText(), node.getKindName())
 	return '';
 }

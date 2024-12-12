@@ -1,4 +1,4 @@
-import { ArrayLiteralExpression, ArrayTypeNode, ClassDeclaration, ClassStaticBlockDeclaration, ConditionalTypeNode, Constructor, ConstructorDeclaration, ConstructorTypeNode, Expression, ExpressionWithTypeArguments, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertyDeclaration, PropertySignature, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
+import { ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, ClassDeclaration, ClassStaticBlockDeclaration, ConditionalTypeNode, Constructor, ConstructorDeclaration, ConstructorTypeNode, Expression, ExpressionWithTypeArguments, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertyDeclaration, PropertySignature, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { Nodely } from "./types";
 
 /**
@@ -57,7 +57,9 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.SetAccessor]: SetAccessorDeclaration,
 	[SK.ConditionalType]: ConditionalTypeNode,
 	[SK.VariableStatement]: VariableStatement,
-	[SK.VariableDeclaration]: VariableDeclaration
+	[SK.VariableDeclaration]: VariableDeclaration,
+	[SK.FunctionExpression]: FunctionExpression,
+	[SK.ArrowFunction]: ArrowFunction
 }
 
 export type TypeByKind<T extends keyof SyntaxKindTypeMap> = SyntaxKindTypeMap[T]
