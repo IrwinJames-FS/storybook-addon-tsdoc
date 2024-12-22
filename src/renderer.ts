@@ -3,9 +3,9 @@ import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $kd, $section } from "./decorators";
+import { $h, $kd, $kind, $section } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { getComments, getExample, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
+import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
 import { getSignature } from "./node-signature";
 
 const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
@@ -128,10 +128,12 @@ ${build(...methods)}`;
 		)
 	},
 	[SK.Parameter]: node=>{
+		
 		return block(
 			$h(4, node, $kd`argument`, getSignature(node)),
 			getComments(node),
-			getExample(node)
+			getExample(node),
+			Node.isObjectBindingPattern(node.getNameNode()) ? build(node.getNameNode()):''
 		)
 	},
 	[SK.TypeParameter]: node=>{
@@ -247,21 +249,39 @@ ${build(...methods)}`;
 			getComments(statement),
 			getExample(statement)
 		)
+	},
+	[SK.ObjectBindingPattern]: node => {
+		return build(...node.getElements());
+	},
+	[SK.BindingElement]: node => {
+		return build(node.getPropertyNameNode())
+	},
+	[SK.IndexedAccessType]: node => {
+		return build(node.getObjectTypeNode(), node.getIndexTypeNode());
+	},
+	[SK.FunctionDeclaration]: node => {
+		return block(
+			$h(4, node, $kd`function`, node.getName(), ':', getSignature(node))
+		)
 	}
 };
 
-
+const IGNOREKINDS = new Set([
+	SK.ExportDeclaration,
+	SK.MultiLineCommentTrivia,
+	SK.SingleLineCommentTrivia
+]);
 export const build = (...nodes: Nodely[]) => nodes.map(node=>{
 	if(!TS.documentPrivate && isPrivate(node)) return '';
 	return bySyntax(node, RENDER_MAP, n=>{
 		if(!n || isPrimitive(n)) return '';
-		TS.err("No support", red(n.getKindName()), cyan(n.getKind()));
+		TS.err("No support", red(n.getKindName()), cyan(n.getKind()), n.getText(), getFullName(n));
 		return '';
 })}).filter(b=>b).join('\n');
 
 export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
-	if(!n || isPrimitive(n)) return '';
-	TS.err("No support", red(n.getKindName()), yellow(n.getKind()));
+	if(!n || isPrimitive(n) || IGNOREKINDS.has(n.getKind())) return '';
+	TS.err("No support", red(n.getKindName()), yellow(n.getKind()), getFullName(n));
 	return '';
 }) => bySyntax(node, RENDER_MAP, df);
 
@@ -271,7 +291,7 @@ export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
  * @returns 
  */
 export const render = (title: string, node: SourceFile) => {
-	const data = node.getChildSyntaxList()?.getChildren().map(c=>renderer(c)).join('\n');
+	const data = node.getChildSyntaxList()?.getChildren().map(c=>renderer(c)).filter(n=>!!n.replace(/\s/g, '')).join('\n---\n');
 	if(!data) return;
 	return `import { Meta } from "@storybook/blocks";
 		

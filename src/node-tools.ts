@@ -1,4 +1,5 @@
 import { Node } from "ts-morph";
+import { magenta } from "console-log-colors";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
@@ -29,14 +30,15 @@ export const isPrivate = (node: Nodely) => {
  * @returns 
  */
 const hasName = <T extends Node>(node: T): node is T & Nameable => 'getName' in node 
-&& typeof node.getName === 'function';
+&& typeof node.getName === 'function'
+&& !Node.isParameterDeclaration(node)
 
 /**
  * Get a nodes name if one is available
  * @param node 
  * @returns 
  */
-export const getName = <T extends Node>(node: Nodely<T>):string => (node && hasName(node)) ? node.getName()
+export const getName = <T extends Node>(node: Nodely<T>):string => (node && hasName(node)) ? escape(node.getName())
 :'';
 
 
@@ -117,7 +119,22 @@ export const getNearestName = (node?: Node) => {
 	}
 	return name;
 }
-
+function escape(str:string) {
+	const htmlEntities = {
+	  '<': '&lt;',
+	  '>': '&gt;',
+	  '&': '&amp;',
+	  '"': '&quot;',
+	  "'": '&apos;',
+	  '/': '&#47;',
+	  '\\': '&#92;',
+	  '{': '&#123;',
+	  '}': '&#125;',
+	  '`': '&#96;'
+	};
+	
+	return str.replace(/[<>&"'/\\{}`]/g, char => htmlEntities[char as keyof typeof htmlEntities]);
+}
 export const getFName = (node: Node) => {
 	const [pre,post] = bySyntax(node, ModMap, n=>{
 		if(!n) return ['','', []]
@@ -190,5 +207,5 @@ export const getExample = (node: Node) => {
 }
 
 
-export const renderCode = (code: string) => `\`\`\`ts\n${createPrinter({removeComments: false}).printFile(createSourceFile("t.ts", code, ScriptTarget.Latest, false, ScriptKind.TS))}\n\`\`\``;
+export const renderCode = (code: string) => code ? `\`\`\`ts\n${createPrinter({removeComments: false}).printFile(createSourceFile("t.ts", code, ScriptTarget.Latest, false, ScriptKind.TS))}\n\`\`\``:'';
 

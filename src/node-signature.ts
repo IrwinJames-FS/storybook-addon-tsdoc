@@ -30,15 +30,30 @@ I think having a method that better at differenciating such things.
 */
 
 import { getDocPath, getFName, getFullName, getName, getTypeNode, isPrimitive } from "./node-tools"
-import { Node, Type, TypedNode } from "ts-morph"
+import { Node, Type, TypedNode, TypeOperatorTypeNode } from "ts-morph"
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $href, $kind, $literal, $name, $type } from "./decorators";
-import { gray, yellow } from "console-log-colors";
+import { gray, green, yellow } from "console-log-colors";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { typelit } from "./constants";
-
+function escape(str:string) {
+	const htmlEntities = {
+	  '<': '&lt;',
+	  '>': '&gt;',
+	  '&': '&amp;',
+	  '"': '&quot;',
+	  "'": '&apos;',
+	  '/': '&#47;',
+	  '\\': '&#92;',
+	  '{': '&#123;',
+	  '}': '&#125;',
+	  '`': '&#96;'
+	};
+	
+	return str.replace(/[<>&"'/\\{}`]/g, char => htmlEntities[char as keyof typeof htmlEntities]);
+}
 
 const fromTypeNode = (node: Node): string => {
 	const tn = getTypeNode(node);
@@ -53,7 +68,9 @@ const typingMap: SKindMap<string> = {
 		return params+': ' + typeNode;
 	},
 	[SK.LiteralType]: node=>$literal(node.getText()),
-	[SK.TupleType]: node=>`[${node.getElements().map(e=>sig(e)).join(', ')}]`,
+	[SK.TupleType]: node=>{
+		return `[${node.getElements().map(e=>sig(e)).join(', ')}]`
+	},
 	[SK.UnionType]: node=>node.getTypeNodes().map(e=>sig(e)).join(' | '),
 	[SK.IntersectionType]: node=>node.getTypeNodes().map(e=>sig(e)).join(' & '),
 	[SK.NamedTupleMember]: node=>`${$name(node.getName())}: ${sig(node.getTypeNode()!)}`,
@@ -70,7 +87,7 @@ const typingMap: SKindMap<string> = {
 	},
 	[SK.Identifier]: node=>{
 		const def = node.getDefinitionNodes()[0]; //I guess its possible to have multiple definitions but I havent thought of a use case where I would have reference to all definitions in one location (extensions would have a link back to immediate source automatically)
-		if(!def) return $type(node.getText()); //no link
+		if(!def) return '';$type(node.getText()); //no link
 		const href = getDocPath(def)
 		if(!href) return $type(node.getText()); //link outside scope
 		return $href(node.getText(), href);
@@ -87,7 +104,7 @@ const typingMap: SKindMap<string> = {
 	[SK.Parameter]: node=>{
 		const typeNode = fromTypeNode(node);
 		const initializer = sig(node.getInitializer());
-		return `${$name((node.isRestParameter() ? '...':'')+node.getName())}: ${typeNode}${initializer ? ' = '+initializer:''}`;
+		return `${$name((node.isRestParameter() ? '...':'')+sig(node.getNameNode()))}: ${typeNode}${initializer ? ' = '+initializer:''}`;
 	},
 	[SK.ArrayLiteralExpression]: node=>'[]',
 	[SK.FunctionType]: node=>{
@@ -129,16 +146,78 @@ const typingMap: SKindMap<string> = {
 
 	[SK.FunctionExpression]: node => {
 		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
-	}
-}
-const defSig = (n: Nodely)=>{
-	if(!n) return '';
-	if(isPrimitive(n)) return $type(n.getText());
-	TS.err("Signature Missing type", yellow(n.getKindName()), gray(getFullName(n)));
-	return $type(n.getText())
+	},
+	[SK.ObjectLiteralExpression]: node => $literal('&lcub;...&rcub;'),
+	[SK.ObjectBindingPattern]: node => {
+		return `&lcub; ... &rcub;`
+	},
+	[SK.BindingElement]: node => {
+		return sig(node.getNameNode())
+	},
+	[SK.ArrayBindingPattern]: node => {
+		return `[${node.getElements().map(n=>sig(n)).join(', ')}]`
+	},
+	[SK.QualifiedName]: node => {
+		return `${sig(node.getLeft())}.${sig(node.getRight())}`;
+	},
+	[SK.TypePredicate]: node => {
+		return `${sig(node.getParameterNameNode())} ${node.hasAssertsModifier() ? sig(node.getAssertsModifier()):'is'} ${sig(node.getTypeNode())}`;
+	},
+	[SK.TypeOperator]: node => {
+		return `${$kind(getOperator(node))} ${sig(node.getTypeNode())}`;
+	},
+	[SK.BinaryExpression]: node => `${sig(node.getLeft())} ${sig(node.getOperatorToken())} ${sig(node.getRight())}`,
+
+	[SK.PropertyAccessExpression]: node => {
+		return `${sig(node.getNameNode())}`;
+	},
+	[SK.CallExpression]: node => {
+		return $type(escape(node.getReturnType().getText())) // todo decode types
+	},
+	[SK.RestType]: node => `...${sig(node.getTypeNode())}`,
+	[SK.IndexedAccessType]: node => `${sig(node.getObjectTypeNode())}[${node.getIndexTypeNode()}]`,
+	[SK.FunctionDeclaration]: node=>{
+		return `(${node.getParameters().map(p=>sig(p)).join(', ')}) =&gt; ${sig(node.getReturnTypeNode()) || $literal('void')}`;
+	},
+
+	//tokens
+	[SK.AsteriskToken]: () => '*',
+	[SK.AsteriskAsteriskToken]: ()=>'**',
+	[SK.AsteriskEqualsToken]: ()=> '*=',
+	[SK.AsteriskAsteriskEqualsToken]: ()=>'**=',
+	[SK.PlusToken]: ()=> '+',
+	[SK.PlusPlusToken]: ()=>'++',
+	[SK.PlusEqualsToken]: ()=>'+=',
+	[SK.MinusToken]: ()=>'-',
+	[SK.MinusMinusToken]: ()=>'--',
+	[SK.MinusEqualsToken]: ()=>'-=',
+	[SK.SlashToken]: ()=>'/',
+	[SK.SlashEqualsToken]: ()=>'/=',
+	[SK.LessThanToken]: ()=>'&lt;',
+	[SK.LessThanEqualsToken]: ()=>'&lt;=',
+	[SK.GreaterThanToken]: ()=>'&gt;',
+	[SK.GreaterThanEqualsToken]: ()=>'&gt;='
 }
 
-const sig = (node: Nodely) => bySyntax(node, typingMap, defSig);
+const getOperator = (node: TypeOperatorTypeNode) =>{
+	switch(node.getOperator()){
+		case SK.ReadonlyKeyword: return 'readonly';
+		case SK.KeyOfKeyword: return 'keyof';
+		case SK.UniqueKeyword: return 'unique';
+	}
+}
+const Ignores = new Set([
+	SK.MultiLineCommentTrivia
+])
+const defSig = (n: Nodely)=>{
+	if(!n || Ignores.has(n.getKind())) return '';
+	if(isPrimitive(n)) return $type(n.getText());
+
+	TS.err("Signature Missing type", yellow(n.getKindName()), gray(getFullName(n)), n.getText());
+	return "";
+}
+
+const sig = (node: Nodely) =>  bySyntax(node, typingMap, defSig);
 /**
  * Once a full signature name is resolved the typing of the object will be necessary. This typing however will be different for different declaration type. As such I will be handling these similar to the SyntaxKind... I need a SyntaxKind switching function
  * @param node 
@@ -147,8 +226,7 @@ export const getSignature = (node: Nodely) => sig(node);
 
 export const isPrimitiveType = (t: Type) => t.isAny() || t.isBigInt() || t.isNumber() || t.isBoolean() || t.isString() || t.isNever() || t.isUndefined() || t.isUnknown() || t.isNull();
 
-export const fromType = (t: Type) => isPrimitiveType(t) ? $type(t.getText())
-: '';
+export const fromType = (t: Type) => '';
 export const getSignatureFromType = (node: Nodely) => {
 	if(!node) return;
 	//const t = node.getType();

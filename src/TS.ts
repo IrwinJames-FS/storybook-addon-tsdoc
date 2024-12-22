@@ -220,7 +220,6 @@ h6.ts-doc-header{
 	 */
 	static documentSourceFile(source: SourceFile){
 		const path = TS.resolveUrl(source.getFilePath())!;
-		TS.log("Documenting", path, source.getFilePath());
 		if(!path) return;
 		const data = render(path, source);
 		if(!data) return;

@@ -1,5 +1,6 @@
-import { ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, ClassDeclaration, ClassStaticBlockDeclaration, ConditionalTypeNode, Constructor, ConstructorDeclaration, ConstructorTypeNode, Expression, ExpressionWithTypeArguments, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ParameterDeclaration, ParenthesizedTypeNode, PropertyDeclaration, PropertySignature, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
+import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassStaticBlockDeclaration, CommentTypeElement, ConditionalTypeNode, Constructor, ConstructorDeclaration, ConstructorTypeNode, ExportDeclaration, Expression, ExpressionWithTypeArguments, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { Nodely } from "./types";
+import { IndexedAccessType } from "typescript";
 
 /**
  * Each syntax kind we are utilizing has a validation method provided by ts-morph. luckily they all appear to utilize the same syntax
@@ -59,7 +60,38 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.VariableStatement]: VariableStatement,
 	[SK.VariableDeclaration]: VariableDeclaration,
 	[SK.FunctionExpression]: FunctionExpression,
-	[SK.ArrowFunction]: ArrowFunction
+	[SK.ArrowFunction]: ArrowFunction,
+	[SK.ObjectLiteralExpression]: ObjectLiteralExpression,
+	[SK.ObjectBindingPattern]: ObjectBindingPattern
+	[SK.BindingElement]: BindingElement,
+	[SK.ArrayBindingPattern]: ArrayBindingPattern
+	[SK.ExportDeclaration]: ExportDeclaration,
+	[SK.QualifiedName]: QualifiedName,
+	[SK.TypePredicate]: TypePredicateNode,
+	[SK.MultiLineCommentTrivia]: Node,
+	[SK.TypeOperator]: TypeOperatorTypeNode,
+	[SK.BinaryExpression]: BinaryExpression,
+	[SK.PropertyAccessExpression]: PropertyAccessExpression,
+	[SK.AsteriskToken]: Node,
+	[SK.AsteriskAsteriskEqualsToken]: Node,
+	[SK.AsteriskEqualsToken]: Node,
+	[SK.AsteriskAsteriskToken]: Node,
+	[SK.PlusToken]: Node,
+	[SK.PlusPlusToken]: Node,
+	[SK.PlusEqualsToken]: Node,
+	[SK.MinusToken]: Node,
+	[SK.MinusMinusToken]: Node,
+	[SK.MinusEqualsToken]: Node,
+	[SK.SlashToken]: Node,
+	[SK.SlashEqualsToken]: Node,
+	[SK.LessThanToken]: Node,
+	[SK.LessThanEqualsToken]: Node,
+	[SK.GreaterThanEqualsToken]: Node,
+	[SK.GreaterThanToken]: Node,
+	[SK.CallExpression]: CallExpression,
+	[SK.RestType]: RestTypeNode,
+	[SK.IndexedAccessType]: IndexedAccessTypeNode,
+	[SK.FunctionDeclaration]: FunctionDeclaration
 }
 
 export type TypeByKind<T extends keyof SyntaxKindTypeMap> = SyntaxKindTypeMap[T]
