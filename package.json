@@ -1,6 +1,6 @@
 {
   "name": "@irwinproject/storybook-addon-tsdoc",
-  "description": "Generate mdx documentation from your typescript!"
+  "description": "Generate mdx documentation from your typescript!",
   "storybook": {
     "displayName": "@irwinproject/storybook-addon-tsdoc",
     "supportedFrameworks": [
