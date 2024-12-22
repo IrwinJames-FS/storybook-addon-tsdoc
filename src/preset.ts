@@ -1,17 +1,13 @@
 import TS from "./TS";
+import { TSDocOptions } from "./types";
 
 
 let ran = false;
-export default function(config: {stories:string[]} & Record<string, any>){
-	
+export default function(config: {stories:string[]} & Record<string, any>, options: Partial<TSDocOptions>){
 	//TODO add in configuration support
-	//const {stories = []} = config;
 	const storyPath = `${TS.docs}/**/*.mdx`;
-	TS.warn(storyPath);
-	//stories.push(storyPath);
-	//config.stories = stories;
-	TS.document();
 	if(!ran){
+		TS.document();
 		ran = true;
 		return {stories: [storyPath]};
 	} 

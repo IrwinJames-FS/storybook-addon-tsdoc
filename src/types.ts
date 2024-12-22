@@ -1,3 +1,5 @@
+import { Node } from "ts-morph"
+
 export type TSDocOptions = {
 	/**
 	 * The path to the projects tsconfig file
@@ -20,7 +22,32 @@ export type TSDocOptions = {
 	shouldClearDocsOnStart: boolean
 
 	/**
-	 * A flag which indicates the render style by default each declaration is given its own file to increase navigation via the sidebar.
+	 * The color kind name should be made when rendering
 	 */
-	//renderStyle: 'source' | 'declaration' for MVP just handle by source as it has the least amount of extra logic
+	kindColor: string
+
+	/**
+	 * The color types should be colored as when rendering
+	 */
+	typeColor: string
+
+	/**
+	 * The color that should be used as a reference type
+	 */
+	refColor: string
+
+	/**
+	 * The color used to color literal values
+	 */
+	litColor: string
+
+	/**
+	 * The color used to color name components in arguments and properties.
+	 */
+	nameColor: string
 }
+
+/**
+ * Just a convenience type as optional but required arguments come up alot with ts-morph
+ */
+export type Nodely<T extends Node = Node> = T | undefined;
