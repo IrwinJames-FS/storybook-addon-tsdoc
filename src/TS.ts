@@ -142,14 +142,18 @@ h6.ts-doc-header{
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
 	 */
-	static document({tsconfig, entry, docs, shouldClearDocsOnStart}: Partial<TSDocOptions>={}){
+	static document({tsconfig, entry, docs, shouldClearDocsOnStart, kindColor, typeColor, refColor, litColor, nameColor}: Partial<TSDocOptions>={}){
 
 		//apply options if any are provided
 		if(tsconfig) this.tsconfig = isAbsolute(tsconfig) ? tsconfig:join(process.cwd(),tsconfig);
 		if(entry) this.entry = entry;
 		if(docs) this.docs = isAbsolute(docs) ? docs:join(process.cwd(), docs);
 		if(shouldClearDocsOnStart !== undefined) this.shouldClearDocsOnStart = shouldClearDocsOnStart;
-		//if(renderStyle) this.renderStyle = renderStyle;
+		if(kindColor) this.kindColor = kindColor;
+		if(typeColor) this.typeColor = typeColor;
+		if(refColor) this.refColor = refColor;
+		if(litColor) this.litColor = litColor;
+		if(nameColor) this.nameColor = nameColor;
 
 
 		//update the options
