@@ -23,7 +23,7 @@ const config: StorybookConfig = {
 };
 ```
 
-Thats it... By default the addon makes a few extensions. 
+Thats it... By default the addon makes a few assumptions. 
 
 1. the **/.storybook** directory is located in the root directory of the project
 2. the **tsconfig.json** for the project is in the same directory as **/.storybook**.
@@ -95,8 +95,8 @@ const config: StorybookConfig = {
 1. Currently **storybook-addon-tsdoc** only supports a single entry point. 
 	* I am exploring methods to build documentation and prevent name collisions for now a glob pattern can be used to encapsulate multiple entry points if necessary. 
 
-2. **/src** file is aliased to '' when building documentation structor. 
-	* I am exploring adding an alias system similar to path aliases to allow for the documentation paths to better reflex the production file structure rather then the development structure.
+2. **/src** file is aliased to '' when building documentation structure. 
+	* I am exploring adding an alias system similar to path aliases to allow for the documentation paths to better reflect the production file structure rather then the development structure.
 3. Documentation is generated per file.
 	* I am exploring more of a per declaration structure similar to how JSDocs works however a concession was made to reach my goal. maybe next release I will add this.
 4. No HMR support.
@@ -127,7 +127,17 @@ const config: StorybookConfig = {
 		}
 		/*
 		evaluates as 
-		(x1: number, y1: number, x2: number, y2: number) => void
+		(x1: number, y1: number, x2: number, y2: number) => number
 		*/
 	```
 	I do plan on addressing this as I build a type infer method. 
+
+	## Feature Requests.
+
+	While I tried to test a range of use cases There may be patterns which are not properly handled or represented. If you find any such instances please submit an issue with the following information.
+	1. an example of the code that is being parsed incorrectly.
+	2. an explanation of how it should be represented or how its being represented incorrectly. 
+		(I cannot promise I will represent a pattern or declaration in your preferred manner however I will try to use existing accepted representations.)
+	3. the version of the addon you are utilizing. 
+
+	I welcome requests for additional features and as I have time to update the addon I will. 
