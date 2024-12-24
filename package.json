@@ -15,6 +15,7 @@
       "react-native"
     ]
   },
+  "private":false,
   "dependencies": {
     "console-log-colors": "^0.5.0",
     "glob": "^11.0.0",
@@ -27,12 +28,16 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url":"git+https://github.com/IrwinJames-FS/storybook-addon-tsdoc"
+  },
+  "keywords": ["typescript", "node", "storybook", "react", "next", "documentation", "svelt"],
+  "author": "James Irwin",
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.9.3",
     "typescript": "^5.7.2"
