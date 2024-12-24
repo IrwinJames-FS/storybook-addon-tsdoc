@@ -2,42 +2,12 @@ import { isAbsolute, join } from "path";
 
 import { blueBright, cyan, green, red, yellow } from "console-log-colors";
 import { Project, SourceFile, } from "ts-morph";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 
 import { minimatch } from "minimatch";
 import { render } from "./renderer";
-
-declare global {
-	interface String {
-		wrap(a: string, b:string):string
-	}
-}
-
-const HTML_CHARS: Record<string, string> = {
-	"&":"&amp;",
-	"<":"&lt;",
-	">":"&gt;",
-	'"':"&quot;",
-	"'":"&#039;",
-	"{":"&lcub;",
-	"}":"&rcub;"
-}
-const ESC_REG = /[&<>"'\{\}]/g;
-/**
- * This should be used to avoid errors with acorn... idealy it should be unecessary but for now will be used.
- * @param text 
- */
-const escape = (text:string)=>{
-	return text.replace(ESC_REG, match=>HTML_CHARS[match]);
-}
-
-String.prototype.wrap = function(a: string='', b: string=''){
-	if(!this.toString()) return '';
-	a = escape(a);
-	b = escape(b);
-	return `${a}${this}${b}`; //this should already be escaped
-}
+import './utils'; //adds the wrap function to strng prototype.
 /**
  * TS is a central repository for options. This will also handle code compiling based off a tsconfig
  */
@@ -66,79 +36,6 @@ export default class TS {
 
 	static renderStyle: 'source' | 'declaration' = 'declaration'; //not supported yet
 	static documentPrivate: boolean = false;
-	static kindColor = "#F08";
-	static typeColor = "rgb(28,128,248)";
-	static refColor = "rgb(0,100,220)";
-	static litColor = "rgb(248, 28, 28)";
-	static nameColor = "rgb(248, 128, 28)";
-	static get style(){
-		return `<style>
-{\`
-.ts-doc-header-wrapper{
-	position: relative;
-}
-h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
-	height: 2px; /* hide without being hidden */
-	padding: 0;
-	margin: 0;
-	font-size:0;
-	border-bottom-width: 0px;
-	position: absolute;
-	background:#F00;
-	top: calc(50% - 8px);
-}
-
-h2.ts-doc-header{
-	font-size: 1.25rem;
-}
-
-h3.ts-doc-header{
-	font-size: 1.2rem;
-}
-
-h4.ts-doc-header{
-	font-size: 1.15rem;
-}
-
-h5.ts-doc-header{
-	font-size: 1.1rem;
-}
-
-h6.ts-doc-header{
-	font-size: 1.05rem;
-}
-
-.ts-doc-header {
-	margin:1rem 0;
-}
-.ts-doc-header:hover + *>a:first-of-type>svg {
-	visibility: visible;
-}
-.ts-doc-header span, .ts-doc-header a{
-	font-size: inherit;
-}
-.ts-doc-kind{
-	color:${this.kindColor}
-}
-.ts-doc-type{
-	color:${this.typeColor}
-}
-.ts-doc-ref{
-	color:${this.refColor}
-}
-.ts-doc-lit{
-	color:${this.litColor}
-}
-.ts-doc-name{
-	color:${this.nameColor}
-}
-.ts-doc-section{
-	position: 'relative';
-	padding-left: 1rem;
-}
-\`}
-</style>`
-	}
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
 	 */
@@ -149,12 +46,6 @@ h6.ts-doc-header{
 		if(entry) this.entry = entry;
 		if(docs) this.docs = isAbsolute(docs) ? docs:join(process.cwd(), docs);
 		if(shouldClearDocsOnStart !== undefined) this.shouldClearDocsOnStart = shouldClearDocsOnStart;
-		if(kindColor) this.kindColor = kindColor;
-		if(typeColor) this.typeColor = typeColor;
-		if(refColor) this.refColor = refColor;
-		if(litColor) this.litColor = litColor;
-		if(nameColor) this.nameColor = nameColor;
-
 
 		//update the options
 		//clear the docs dir
@@ -165,6 +56,8 @@ h6.ts-doc-header{
 		} else {
 			if(!existsSync(this.docs)) mkdirSync(this.docs);
 		}
+		//move the styles to the docs foler
+		cpSync(join(__dirname, "style.css"), this.docs);
 
 		try {
 			this.documentProject();

@@ -1,0 +1,62 @@
+.ts-doc-header-wrapper{
+	position: relative;
+}
+h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
+	height: 2px; /* hide without being hidden */
+	padding: 0;
+	margin: 0;
+	font-size:0;
+	border-bottom-width: 0px;
+	position: absolute;
+	background:#F00;
+	top: calc(50% - 8px);
+}
+
+h2.ts-doc-header{
+	font-size: 1.25rem;
+}
+
+h3.ts-doc-header{
+	font-size: 1.2rem;
+}
+
+h4.ts-doc-header{
+	font-size: 1.15rem;
+}
+
+h5.ts-doc-header{
+	font-size: 1.1rem;
+}
+
+h6.ts-doc-header{
+	font-size: 1.05rem;
+}
+
+.ts-doc-header {
+	margin:1rem 0;
+}
+.ts-doc-header:hover + *>a:first-of-type>svg {
+	visibility: visible;
+}
+.ts-doc-header span, .ts-doc-header a{
+	font-size: inherit;
+}
+.ts-doc-kind{
+	color:var(--tsdoc-kind-color, #F08);
+}
+.ts-doc-type{
+	color:var(--tsdoc-type-color, rgb(28,128,248));
+}
+.ts-doc-ref{
+	color:var(--tsdoc-ref-color, rgb(0,100,220));
+}
+.ts-doc-lit{
+	color:var(--tsdoc-lit-color, rgb(248, 28, 28));
+}
+.ts-doc-name{
+	color:var(--tsdoc-name-color, rgb(248, 128, 28));
+}
+.ts-doc-section{
+	position: 'relative';
+	padding-left: 1rem;
+}

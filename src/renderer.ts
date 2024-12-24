@@ -7,6 +7,7 @@ import { $h, $kd, $kind, $section } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
 import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
 import { getSignature } from "./node-signature";
+import { STORY_BOOK_BLOCK } from "./constants";
 
 const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
 	const tp = build(...typeParams);
@@ -293,11 +294,8 @@ export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
 export const render = (title: string, node: SourceFile) => {
 	const data = node.getChildSyntaxList()?.getChildren().map(c=>renderer(c)).filter(n=>!!n.replace(/\s/g, '')).join('\n---\n');
 	if(!data) return;
-	return `import { Meta } from "@storybook/blocks";
-		
+	return `${STORY_BOOK_BLOCK}
 <Meta title="${title}"/>
 
-${data}
-
-${TS.style}`
+${data}`
 }
