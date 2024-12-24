@@ -26,7 +26,7 @@ declare global {
 
 if (!String.prototype.wrap) {
 	String.prototype.wrap = function(a: string='', b: string=''){
-		if(!this.toString()) return '';
+		if(!this.toString().trim()) return '';
 		a = escape(a);
 		b = escape(b);
 		return `${a}${this}${b}`; //this should already be escaped

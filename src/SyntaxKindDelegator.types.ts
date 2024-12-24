@@ -8,8 +8,14 @@ import { SyntaxKindTypeMap } from "./SyntaxKindMap";
  */
 export type SyntaxKindValidator<T extends Node> = (node: Nodely) => node is T;
 
+/**
+ * Just a signature that allows a typed but open ended callback.
+ */
 export type SyntaxKindDelegateDefaultAction<T> = (node: Nodely)=>T;
 
+/**
+ * Every syntax kind can be provided this action which automatically types it. additionally if tiered support is necessary and you might encounter a null you can call the fallback callback.
+ */
 export type SyntaxKindDelegateAction<T extends Node, R> = (node: T, defaultFN: SyntaxKindDelegateDefaultAction<R>) => R
 /**
  * For the delegator method to work it needs delegates which will know how to consume the generic Node and utilize it as a specialized node based on its syntax Kind. 

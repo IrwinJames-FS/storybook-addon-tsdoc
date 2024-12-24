@@ -66,7 +66,7 @@ export default class TS {
 			if(!existsSync(this.docs)) mkdirSync(this.docs);
 		}
 		//move the styles to the docs foler
-		cpSync(join(__dirname, "style.css"), this.docs);
+		cpSync(join(__dirname, "style.css"), join(this.docs, "style.css"));
 
 		try {
 			this.documentProject();
