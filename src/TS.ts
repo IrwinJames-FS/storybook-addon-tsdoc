@@ -1,10 +1,8 @@
 import { isAbsolute, join } from "path";
-
 import { blueBright, cyan, green, red, yellow } from "console-log-colors";
 import { Project, SourceFile, } from "ts-morph";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
-
 import { minimatch } from "minimatch";
 import { render } from "./renderer";
 import './utils'; //adds the wrap function to strng prototype.
@@ -13,33 +11,44 @@ import './utils'; //adds the wrap function to strng prototype.
  */
 export default class TS {
 	/**
-	 * @todo add configurable option
-	 * @todo add files to storybook in dev environment (builder api I think)
+	 * The document folder path
 	 */
 	static docs: string = join(process.cwd(), ".tsdoc");
+
 	/**
-	 * @todo add configurable option
+	 * The tsconfig path
 	 */
-	static tsconfig: string = join(process.cwd(), "tsconfig.json")
+	static tsconfig: string = join(process.cwd(), "tsconfig.json");
+
 	/**
 	 * @todo change to accept multiple entries.
-	 * @todo add configurable option
 	 * @todo add automatic entry based on tsconfig
 	 */
 	static entry: string = "src/**/!(*.test|*.stories|*.d).ts"
 
+	/**
+	 * @todo add configurable option
+	 */
 	static aliases: [RegExp, string][] = [
 		[/src\//, ''] //drop the src from the docpath
 	]
 
+	/**
+	 * I hate this property
+	 * @todo virtualize docs in dev environment.
+	 */
 	static shouldClearDocsOnStart: boolean = true
 
-	static renderStyle: 'source' | 'declaration' = 'declaration'; //not supported yet
+	/**
+	 * @todo support not documenting private variables.
+	 */
 	static documentPrivate: boolean = false;
+
+
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
 	 */
-	static document({tsconfig, entry, docs, shouldClearDocsOnStart, kindColor, typeColor, refColor, litColor, nameColor}: Partial<TSDocOptions>={}){
+	static document({tsconfig, entry, docs, shouldClearDocsOnStart}: Partial<TSDocOptions>={}){
 
 		//apply options if any are provided
 		if(tsconfig) this.tsconfig = isAbsolute(tsconfig) ? tsconfig:join(process.cwd(),tsconfig);
@@ -89,6 +98,11 @@ export default class TS {
 		return join(this.docs, url.replace(/\//g, '-')+'.mdx');
 	}
 
+	/**
+	 * Resolves to a storybook url path value.
+	 * @param url 
+	 * @returns {string}
+	 */
 	static resolveDocPath(url: string): string{
 		return '/docs/'+url.replace(/[\/\.]/g, '-')+'--docs';
 	}
@@ -123,18 +137,34 @@ export default class TS {
 		return writeFileSync(TS.resolvedDocFilePath(path), data);
 	}
 
+	/**
+	 * A prefixed log method to make identification easier
+	 * @param args 
+	 */
 	static log(...args: unknown[]){
 		console.log(blueBright("TsDoc"), ...args);
 	}
 
+	/**
+	 * A red prefixed log method.
+	 * @param args 
+	 */
 	static err(...args: unknown[]){
 		console.log(red("TsDoc"), ...args);
 	}
 
+	/**
+	 * A yellow prefixed log method.
+	 * @param args 
+	 */
 	static warn(...args: unknown[]){
 		console.log(yellow("TsDoc"), ...args);
 	}
 
+	/**
+	 * A green prefixed log method. 
+	 * @param args 
+	 */
 	static success(...args: unknown[]){
 		console.log(green("TsDoc"), ...args);
 	}
