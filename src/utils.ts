@@ -15,9 +15,12 @@ const ESC_REG = /[&<>"'\{\}]/g;
  * @param text 
  */
 export const escape = (text:string)=>{
-	return text.replace(ESC_REG, match=>HTML_CHARS[match]);
+	return text ? text.replace(ESC_REG, match=>HTML_CHARS[match]):'';
 }
 
+/**
+ * Its just more convenient if this is attached to the string prototype.
+ */
 declare global {
 	interface String {
 		wrap(a: string, b:string):string

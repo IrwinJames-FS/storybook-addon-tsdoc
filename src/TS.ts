@@ -114,8 +114,12 @@ export default class TS {
 		const project = new Project({
 			tsConfigFilePath: this.tsconfig,
 		});
-		project.addSourceFilesAtPaths(this.entry);
-		TS.log(cyan("Documenting"), red(project.getSourceFiles().length), `file${project.getSourceFiles().length === 1 ? '':'s'}`);
+		project.addSourceFilesAtPaths(join(process.cwd(),this.entry));
+		project.getSourceFiles().forEach(f=>{
+			const match = minimatch(f.getFilePath(), join(process.cwd(),this.entry));
+			if(!match) project.removeSourceFile(f)
+		});
+		TS.log(cyan("Documenting"), join(process.cwd(), TS.entry), red(project.getSourceFiles().length), `file${project.getSourceFiles().length === 1 ? '':'s'}`);
 		project.getSourceFiles().forEach(this.documentSourceFile);
 	} 
 

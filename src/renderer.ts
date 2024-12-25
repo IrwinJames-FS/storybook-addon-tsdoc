@@ -6,9 +6,16 @@ import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $h, $kd, $kind, $section } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
 import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
-import { getSignature } from "./node-signature";
+import { getModifiers, getSignature } from "./node-signature";
 import { STORY_BOOK_BLOCK } from "./constants";
 
+/**
+ * Standardizes the properties handled by different function like declarations and expressions.
+ * @param typeParams 
+ * @param args 
+ * @param returnNode 
+ * @returns 
+ */
 const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
 	const tp = build(...typeParams);
 	const ag = build(...args);
@@ -38,15 +45,25 @@ const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: Parameter
 	]
 }
 
-const block = (...blocks: string[]) => blocks.filter(b=>b).join('\n');
+/**
+ * Just a convenient way to combine strings as blocks of text within a file.
+ * @param blocks 
+ * @returns 
+ */
+const block = (...blocks: string[]) => blocks.filter(b=>b.trim()).join('\n');
+
+
+/**
+ * Tweaking node handling via syntax kind
+ */
 const RENDER_MAP: SKindMap<string> = {
 	[SK.TypeAliasDeclaration]: node => {
 		const tn = node.getTypeNode();
 		const args = node.getTypeParameters();
 		const tArgs = build(...args);
-		const typed = build(tn);
+		const typed = build();
 		return block(
-			$h(2, node, $kd`type`, node.getName()+`${args.length ? '&lt;'+args.map(a=>getSignature(a)).join(', ')+'&gt;':''}`, ':', getSignature(tn)),
+			$h(2, node, $kd`type`, node.getName()+`${args.map(getSignature).join(', ').wrap('<', '>')}`, ':', getSignature(tn)),
 			getComments(node),
 			getExample(node),
 			tArgs ? $section(tArgs):'',
@@ -67,18 +84,18 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.TypeLiteral]: node => {
 		const properties = node.getProperties();
 		const methods = node.getMethods();
-		let data = '';
-		if(properties.length) data += $h(5, undefined, 'Properties:') + `
-${build(...properties)}`;
-		if(methods.length) data += $h(5, undefined, 'Methods:') + `
-${build(...methods)}`;
-		return data;
+		return block(
+			properties.length ? $h(5, undefined, 'Properties:'):'',
+			build(...properties),
+			methods.length ? $h(5, undefined, 'Methods:'):'',
+			build(...methods)
+		)
 	},
 	[SK.PropertySignature]: node=>{
 		const tn = node.getTypeNode();
 		const typed = build(tn);
 		return block(
-			$h(4, node, $kd`${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
+			$h(4, node, getModifiers(node), $kd`${isMethodLike(tn) ? 'method1':'property1'}`, node.getName(), node.hasQuestionToken() ? '?':'', ':', getSignature(tn)),
 			getComments(node),
 			getExample(node),
 			typed ? $section(typed):''
@@ -198,7 +215,6 @@ ${build(...methods)}`;
 		const properties: Node[] = [];
 		const methods: Node[] = [];
 		for(const nds of node.getProperties()){
-			const tn = nds.getTypeNode();
 			if(isMethodLike(nds.getTypeNode())) methods.push(nds);
 			else properties.push(nds);
 		}
@@ -245,10 +261,13 @@ ${build(...methods)}`;
 		
 		if(!statement) return '';
 		const dk = statement.getDeclarationKind();
+		const tn = node.getTypeNode();
+		const initializer = node.getInitializer();
 		return block(
 			$h(4, node, $kd`${dk}`, getName(node), ':', getSignature(node)),
 			getComments(statement),
-			getExample(statement)
+			getExample(statement),
+			build(tn ?? initializer)
 		)
 	},
 	[SK.ObjectBindingPattern]: node => {
@@ -264,7 +283,45 @@ ${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`function`, node.getName(), ':', getSignature(node))
 		)
-	}
+	},
+	[SK.ExpressionStatement]: node => '', //expressions are blocks of logic. Currently I dont plan on handling these instances. 
+	[SK.ClassExpression]:node => {
+		const constructors = build(...node.getConstructors());
+		const staticBlocks = build(...node.getStaticBlocks());
+		const staticProperties = build(...node.getStaticProperties());
+		const staticMethods = build(...node.getStaticMethods());
+		const instanceProperties = build(...node.getInstanceProperties());
+		const instanceMethods = build(...node.getInstanceMethods());
+		return block(
+			$h(
+				2, 
+				node, 
+				$kd`class`, 
+				node.getName(),
+				getSignature(node)
+			),
+			getComments(node),
+			getExample(node),
+			$section(
+				constructors,
+				staticBlocks,
+				staticProperties,
+				staticMethods,
+				instanceProperties,
+				instanceMethods
+			)
+		)
+	},
+	[SK.ArrayLiteralExpression]: node => build(...node.getElements()),
+	[SK.ObjectLiteralExpression]: node => block($section(build(...node.getProperties()))),
+	[SK.PropertyAssignment]: node => block(
+		$h(4, node, $kd`property`, getSignature(node)),
+		getComments(node),
+		getExample(node),
+		build()
+	),
+	[SK.ArrowFunction]: node => build(node.getReturnTypeNode()),
+	[SK.NewExpression]: ()=>``
 };
 
 const IGNOREKINDS = new Set([
@@ -272,13 +329,15 @@ const IGNOREKINDS = new Set([
 	SK.MultiLineCommentTrivia,
 	SK.SingleLineCommentTrivia
 ]);
+
+
 export const build = (...nodes: Nodely[]) => nodes.map(node=>{
 	if(!TS.documentPrivate && isPrivate(node)) return '';
 	return bySyntax(node, RENDER_MAP, n=>{
 		if(!n || isPrimitive(n)) return '';
 		TS.err("No support", red(n.getKindName()), cyan(n.getKind()), n.getText(), getFullName(n));
 		return '';
-})}).filter(b=>b).join('\n');
+})}).filter(b=>b.trim()).join('\n');
 
 export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
 	if(!n || isPrimitive(n) || IGNOREKINDS.has(n.getKind())) return '';

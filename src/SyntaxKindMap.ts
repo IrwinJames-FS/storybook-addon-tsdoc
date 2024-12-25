@@ -1,4 +1,4 @@
-import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionWithTypeArguments, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
+import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
 export interface SyntaxKindTypeMap<T=never> {
 	[SK.SourceFile]: SourceFile
@@ -73,7 +73,11 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.CallExpression]: CallExpression,
 	[SK.RestType]: RestTypeNode,
 	[SK.IndexedAccessType]: IndexedAccessTypeNode,
-	[SK.FunctionDeclaration]: FunctionDeclaration
+	[SK.FunctionDeclaration]: FunctionDeclaration,
+	[SK.ClassExpression]: ClassExpression,
+	[SK.ExpressionStatement]: ExpressionStatement,
+	[SK.PropertyAssignment]: PropertyAssignment,
+	[SK.NewExpression]: NewExpression
 }
 
 export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
@@ -149,6 +153,9 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.CallExpression]: Node.isCallExpression,
 	[SK.RestType]: Node.isRestTypeNode,
 	[SK.IndexedAccessType]: Node.isIndexedAccessTypeNode,
-	[SK.FunctionDeclaration]: Node.isFunctionDeclaration
-
+	[SK.FunctionDeclaration]: Node.isFunctionDeclaration,
+	[SK.ClassExpression]: Node.isClassExpression,
+	[SK.ExpressionStatement]: Node.isExpressionStatement,
+	[SK.PropertyAssignment]: Node.isPropertyAssignment,
+	[SK.NewExpression]: Node.isNewExpression
 };

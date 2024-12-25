@@ -29,7 +29,7 @@ export const $h = (s: Headings,node: Nodely, ...content: unknown[]) => `<div cla
 ${ node ? `${'#'.repeat(s)} ${getFullName(node)}\n\n`:''}</div>`;
 
 export const $section = (...content:string[]) => {
-	const ctn = content.filter(c=>c).join('\n');
+	const ctn = content.filter(c=>c.trim()).join('\n');
 	if(!ctn) return '';
 	return `<div className="ts-doc-section">
 		${ctn}

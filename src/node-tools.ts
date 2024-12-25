@@ -1,12 +1,11 @@
 import { Node } from "ts-morph";
-import { magenta } from "console-log-colors";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { cyan, green } from "console-log-colors";
 import { Nodely } from "./types";
 import { createPrinter, createSourceFile, ScriptKind, ScriptTarget } from "typescript";
-
+import { escape } from "./utils";
 interface Nameable extends Node {
 	getName():string
 }
@@ -119,22 +118,7 @@ export const getNearestName = (node?: Node) => {
 	}
 	return name;
 }
-function escape(str:string) {
-	const htmlEntities = {
-	  '<': '&lt;',
-	  '>': '&gt;',
-	  '&': '&amp;',
-	  '"': '&quot;',
-	  "'": '&apos;',
-	  '/': '&#47;',
-	  '\\': '&#92;',
-	  '{': '&#123;',
-	  '}': '&#125;',
-	  '`': '&#96;'
-	};
-	
-	return str.replace(/[<>&"'/\\{}`]/g, char => htmlEntities[char as keyof typeof htmlEntities]);
-}
+
 export const getFName = (node: Node) => {
 	const [pre,post] = bySyntax(node, ModMap, n=>{
 		if(!n) return ['','', []]
