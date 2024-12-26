@@ -1,13 +1,14 @@
-import { Node, ParameterDeclaration, PropertyDeclaration, SourceFile, TypeParameterDeclaration } from "ts-morph";
+import { ArrowFunction, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, ParameterDeclaration, PropertyDeclaration, PropertySignature, SourceFile, TypeParameterDeclaration } from "ts-morph";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $kd, $kind, $section } from "./decorators";
+import { $h, $kd, $kind, $literal, $section } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate } from "./node-tools";
-import { getModifiers, getSignature } from "./node-signature";
+import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
+import { fromType, getModifiers, getSignature } from "./node-signature";
 import { STORY_BOOK_BLOCK } from "./constants";
+
 
 /**
  * Standardizes the properties handled by different function like declarations and expressions.
@@ -16,10 +17,10 @@ import { STORY_BOOK_BLOCK } from "./constants";
  * @param returnNode 
  * @returns 
  */
-const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: ParameterDeclaration[], returnNode?: Node) => {
-	const tp = build(...typeParams);
-	const ag = build(...args);
-	const rt = build(returnNode);
+const renderFNDetails = (node: FunctionTypeNode | FunctionDeclaration | FunctionExpression | MethodDeclaration | MethodSignature | ArrowFunction) => {
+	const tp = build(...node.getTypeParameters());
+	const ag = build(...node.getParameters());
+	const rt = build(node.getReturnTypeNode()) || fromType(node.getType())
 	return [
 		...tp ? [
 			$section(
@@ -52,6 +53,16 @@ const renderFNDetails = (typeParams: TypeParameterDeclaration[], args: Parameter
  */
 const block = (...blocks: string[]) => blocks.filter(b=>b.trim()).join('\n');
 
+const renderTyped = <T extends NamedTupleMember | PropertySignature | PropertyDeclaration>(kind: string | ((node: T)=>string))=>(node: T) => {
+	const tn = node.getTypeNode();
+	const typed = build(tn);
+	return block(
+		$h(4, node, isStatic(node) ? $kd`static`:'', $kind(typeof kind === 'string' ? kind:kind(node)), getModifiers(node), node.getName(), node.hasQuestionToken() ? '?':'', ':', getSignature(tn)),
+		getComments(node),
+		getExample(node),
+		typed ? $section(typed):''
+	)
+}
 
 /**
  * Tweaking node handling via syntax kind
@@ -71,78 +82,40 @@ const RENDER_MAP: SKindMap<string> = {
 		);
 	},
 	[SK.TupleType]: node => build(...node.getElements()),
-	[SK.NamedTupleMember]: node => {
-		const tn = node.getTypeNode();
-		const typed = build(tn);
-		return block(
-			$h(4, node, $kd`tuple item`, node.getName(), ':', getSignature(tn)),
-			getComments(node),
-			getExample(node),
-			typed ? $section(typed):''
-		)
-	},
+	[SK.NamedTupleMember]: renderTyped('tuple item'),
 	[SK.TypeLiteral]: node => {
 		const properties = node.getProperties();
 		const methods = node.getMethods();
 		return block(
-			properties.length ? $h(5, undefined, 'Properties:'):'',
-			build(...properties),
-			methods.length ? $h(5, undefined, 'Methods:'):'',
-			build(...methods)
+			properties.length ? $section(
+				$h(5, undefined, 'Properties:'),
+				build(...properties)
+			):'',
+			methods.length ? $section(
+				$h(5, undefined, 'Methods:'),
+				build(...methods)
+			):''
 		)
 	},
-	[SK.PropertySignature]: node=>{
-		const tn = node.getTypeNode();
-		const typed = build(tn);
-		return block(
-			$h(4, node, getModifiers(node), $kd`${isMethodLike(tn) ? 'method1':'property1'}`, node.getName(), node.hasQuestionToken() ? '?':'', ':', getSignature(tn)),
-			getComments(node),
-			getExample(node),
-			typed ? $section(typed):''
-		);
-	},
-	[SK.PropertyDeclaration]: node=>{
-		const tn = node.getTypeNode();
-		const typed = build(tn);
-		return block(
-			$h(4, node, $kd`${node.isStatic() ? 'static ':''}${isMethodLike(tn) ? 'method':'property'}`, node.getName(), ':', getSignature(tn)),
-			getComments(node),
-			getExample(node),
-			typed ? $section(typed):''
-		);
-	},
+	[SK.PropertySignature]: renderTyped(n=>isMethodLike(n.getTypeNode()) ? 'method':'property'),
+	[SK.PropertyDeclaration]: renderTyped(n=>isMethodLike(n.getTypeNode()) ? 'method':'property'),
 	[SK.MethodSignature]: node=>{
 		return block(
 			$h(4, node, $kd`method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
 			getExample(node),
-			...renderFNDetails(
-				node.getTypeParameters(),
-				node.getParameters(),
-				node.getReturnTypeNode()
-			)
+			...renderFNDetails(node)
 		)
 	},
 	//unlike the method signature
-	[SK.FunctionType]: node=>{
-		return block(
-			...renderFNDetails(
-				node.getTypeParameters(),
-				node.getParameters(),
-				node.getReturnTypeNode()
-			),
-		);
-	},
+	[SK.FunctionType]: node=>block(...renderFNDetails(node)),
+	[SK.ArrowFunction]: node => block(...renderFNDetails(node)),
 	[SK.MethodDeclaration]: node=>{
 		return block(
 			$h(4, node, $kd`${node.isStatic() ? 'static ':''}method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
 			getExample(node),
-			...renderFNDetails(
-				node.getTypeParameters(),
-				node.getParameters(),
-				node.getReturnTypeNode()
-			)
+			...renderFNDetails(node)
 		)
 	},
 	[SK.Parameter]: node=>{
@@ -168,33 +141,25 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.UnionType]: node => build(...node.getTypeNodes()),
 	[SK.IntersectionType]: node => build(...node.getTypeNodes()),
 	[SK.ArrayType]: node => build(node.getElementTypeNode()),
-	[SK.ClassDeclaration]:node => {
-		const constructors = build(...node.getConstructors());
-		const staticBlocks = build(...node.getStaticBlocks());
-		const staticProperties = build(...node.getStaticProperties());
-		const staticMethods = build(...node.getStaticMethods());
-		const instanceProperties = build(...node.getInstanceProperties());
-		const instanceMethods = build(...node.getInstanceMethods());
-		return block(
-			$h(
-				2, 
-				node, 
-				$kd`class`, 
-				node.getName(),
-				getSignature(node)
-			),
-			getComments(node),
-			getExample(node),
-			$section(
-				constructors,
-				staticBlocks,
-				staticProperties,
-				staticMethods,
-				instanceProperties,
-				instanceMethods
-			)
+	[SK.ClassDeclaration]:node => block(
+		$h(
+			2, 
+			node, 
+			$kd`class`, 
+			node.getName(),
+			getSignature(node)
+		),
+		getComments(node),
+		getExample(node),
+		$section(
+			build(...node.getConstructors()),
+			build(...node.getStaticBlocks()),
+			build(...node.getStaticProperties()),
+			build(...node.getStaticMethods()),
+			build(...node.getInstanceProperties()),
+			build(...node.getInstanceMethods())
 		)
-	},
+	),
 	[SK.ClassStaticBlockDeclaration]: node=>{
 		const comments = getComments(node).trim();
 		return comments ? block(
@@ -211,19 +176,6 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.InterfaceDeclaration]: node=>{
 		const typeParams = build(...node.getTypeParameters());
 		const extensions = build(...node.getExtends());
-		
-		const properties: Node[] = [];
-		const methods: Node[] = [];
-		for(const nds of node.getProperties()){
-			if(isMethodLike(nds.getTypeNode())) methods.push(nds);
-			else properties.push(nds);
-		}
-		methods.push(...node.getMethods());
-		let data = '';
-		if(properties.length) data += $h(5, undefined, 'Properties:') + `
-${build(...properties)}`;
-		if(methods.length) data += $h(5, undefined, 'Methods:') + `
-${build(...methods)}`;
 		return block(
 			$h(4, node, $kd`interface`, node.getName(), getSignature(node)),
 			...(typeParams ? [
@@ -236,82 +188,61 @@ ${build(...methods)}`;
 				$h(5, undefined, 'Extends:'),
 				$section(typeParams)
 			]:[]),
-			$section(data)
+			$section(
+				build(...node.getProperties()),
+				build(...node.getMethods())
+			)
 		);
 	},
-	[SK.ExpressionWithTypeArguments]: node=>{
-		return build(...node.getTypeArguments())
-	},
-	[SK.GetAccessor]: node=>{
-		return block(
-			$h(4, node, $kd`${node.isStatic() ? 'static ':''}get`, getName(node), ':', getSignature(node))
-		)
-	},
-	[SK.SetAccessor]: node=>{
-		return block(
-			$h(4, node, $kd`${node.isStatic() ? 'static ':''}set`, getName(node), ':', getSignature(node))
-		)
-	},
+	[SK.ExpressionWithTypeArguments]: node=>build(...node.getTypeArguments()),
+	[SK.GetAccessor]: node=> block(
+		$h(4, node, $kd`${node.isStatic() ? 'static ':''}get`, getName(node), ':', getSignature(node)),
+		getComments(node),
+		getExample(node)
+	),
+	[SK.SetAccessor]: node=>block(
+		$h(4, node, $kd`${node.isStatic() ? 'static ':''}set`, getName(node), ':', getSignature(node)),
+		getComments(node),
+		getExample(node)
+	),
 	[SK.ConditionalType]: node=>build(node.getExtendsType(), node.getTrueType(), node.getFalseType()),
-	[SK.VariableStatement]: node => {
-		return build(...node.getDeclarations())
-	},
+	[SK.VariableStatement]: node => build(...node.getDeclarations()),
 	[SK.VariableDeclaration]: node => {
 		const statement = node.getVariableStatement();
-		
 		if(!statement) return '';
-		const dk = statement.getDeclarationKind();
-		const tn = node.getTypeNode();
-		const initializer = node.getInitializer();
 		return block(
-			$h(4, node, $kd`${dk}`, getName(node), ':', getSignature(node)),
+			$h(4, node, $kd`${statement.getDeclarationKind()}`, getName(node), ':', getSignature(node)),
 			getComments(statement),
 			getExample(statement),
-			build(tn ?? initializer)
+			build(node.getTypeNode() ?? node.getInitializer())
 		)
 	},
-	[SK.ObjectBindingPattern]: node => {
-		return build(...node.getElements());
-	},
-	[SK.BindingElement]: node => {
-		return build(node.getPropertyNameNode())
-	},
-	[SK.IndexedAccessType]: node => {
-		return build(node.getObjectTypeNode(), node.getIndexTypeNode());
-	},
-	[SK.FunctionDeclaration]: node => {
-		return block(
-			$h(4, node, $kd`function`, node.getName(), ':', getSignature(node))
-		)
-	},
+	[SK.ObjectBindingPattern]: node => build(...node.getElements()),
+	[SK.BindingElement]: node => build(node.getPropertyNameNode()),
+	[SK.IndexedAccessType]: node => build(node.getObjectTypeNode(), node.getIndexTypeNode()),
+	[SK.FunctionDeclaration]: node => block(
+		$h(4, node, $kd`function`, node.getName(), ':', getSignature(node))
+	),
 	[SK.ExpressionStatement]: node => '', //expressions are blocks of logic. Currently I dont plan on handling these instances. 
-	[SK.ClassExpression]:node => {
-		const constructors = build(...node.getConstructors());
-		const staticBlocks = build(...node.getStaticBlocks());
-		const staticProperties = build(...node.getStaticProperties());
-		const staticMethods = build(...node.getStaticMethods());
-		const instanceProperties = build(...node.getInstanceProperties());
-		const instanceMethods = build(...node.getInstanceMethods());
-		return block(
-			$h(
-				2, 
-				node, 
-				$kd`class`, 
-				node.getName(),
-				getSignature(node)
-			),
-			getComments(node),
-			getExample(node),
-			$section(
-				constructors,
-				staticBlocks,
-				staticProperties,
-				staticMethods,
-				instanceProperties,
-				instanceMethods
-			)
+	[SK.ClassExpression]:node => block(
+		$h(
+			2, 
+			node, 
+			$kd`class`, 
+			node.getName(),
+			getSignature(node)
+		),
+		getComments(node),
+		getExample(node),
+		$section(
+			build(...node.getConstructors()),
+			build(...node.getStaticBlocks()),
+			build(...node.getStaticProperties()),
+			build(...node.getStaticMethods()),
+			build(...node.getInstanceProperties()),
+			build(...node.getInstanceMethods())
 		)
-	},
+	),
 	[SK.ArrayLiteralExpression]: node => build(...node.getElements()),
 	[SK.ObjectLiteralExpression]: node => block($section(build(...node.getProperties()))),
 	[SK.PropertyAssignment]: node => block(
@@ -320,17 +251,21 @@ ${build(...methods)}`;
 		getExample(node),
 		build()
 	),
-	[SK.ArrowFunction]: node => build(node.getReturnTypeNode()),
 	[SK.NewExpression]: ()=>``
 };
 
+//Again a way to ignore or not alert me of lacking support. it seems there should be an interface for this. 
 const IGNOREKINDS = new Set([
 	SK.ExportDeclaration,
 	SK.MultiLineCommentTrivia,
 	SK.SingleLineCommentTrivia
 ]);
 
-
+/**
+ * Builds based on a list of nodes. 
+ * @param nodes 
+ * @returns 
+ */
 export const build = (...nodes: Nodely[]) => nodes.map(node=>{
 	if(!TS.documentPrivate && isPrivate(node)) return '';
 	return bySyntax(node, RENDER_MAP, n=>{

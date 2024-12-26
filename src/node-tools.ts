@@ -144,6 +144,11 @@ export const getDocPath = (node: Node): string | undefined => {
 	return TS.resolveDocPath(ref)+(fn ? '#'+fn.toLowerCase():'')
 }
 
+/**
+ * With there being 4 to 5 different method like declarations it seems like a good way to reduce redundant code. 
+ * @param node 
+ * @returns 
+ */
 export const isMethodLike = (node?: Node): boolean => {
 	if(!node) return false;
 	const k = node.getKind();
@@ -193,3 +198,7 @@ export const getExample = (node: Node) => {
 
 export const renderCode = (code: string) => code ? `\`\`\`ts\n${createPrinter({removeComments: false}).printFile(createSourceFile("t.ts", code, ScriptTarget.Latest, false, ScriptKind.TS))}\n\`\`\``:'';
 
+export const isStatic = (node: Node) => {
+	if(!Node.isStaticable(node)) return false;
+	return node.isStatic();
+}

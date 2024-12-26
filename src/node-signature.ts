@@ -101,7 +101,6 @@ const typingMap: SKindMap<string> = {
 	[SK.TypeOperator]: node => `${$kind(getOperator(node))} ${fromTypeNode}`,
 	[SK.BinaryExpression]: node => `${sig(node.getLeft())} ${sig(node.getOperatorToken())} ${sig(node.getRight())}`,
 	[SK.CallExpression]: node => $type(escape(node.getReturnType().getText())),
-	
 	[SK.IndexedAccessType]: node => `${sig(node.getObjectTypeNode())}[${node.getIndexTypeNode()}]`,
 
 	//object literat expressions or declarations or types
@@ -109,9 +108,6 @@ const typingMap: SKindMap<string> = {
 	[SK.ObjectBindingPattern]: objLiteral,
 	[SK.TypeLiteral]: objLiteral,
 	
-
-	
-
 	//tokens
 	[SK.AsteriskToken]: () => '*',
 	[SK.AsteriskAsteriskToken]: ()=>'**',
@@ -175,7 +171,6 @@ const typingMap: SKindMap<string> = {
 		return rtn ? sig(rtn)
 		: getSignatureFromType(node) ?? ''
 	},
-
 	[SK.VariableDeclaration]: node => {
 		const tn = fromTypeNode(node);
 		if(tn) return tn;
@@ -186,9 +181,24 @@ const typingMap: SKindMap<string> = {
 	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`
 }
 
-export const getModifiers = (node: ModifierableNode) => {
+/**
+ * Converts modifier tokens to plain text
+ * @todo style this maybe.
+ * @param node 
+ * @returns 
+ */
+export const getModifiers = (node: Node) => {
+	if(!Node.isModifierable(node)) return [];
 	return node.getModifiers().map(m=>m.getText()).join(' ')
 }
+
+/**
+ * Returns the appropriate operator based on syntax kind. 
+ * 
+ * could probably just use getText. 
+ * @param node 
+ * @returns 
+ */
 const getOperator = (node: TypeOperatorTypeNode) =>{
 	switch(node.getOperator()){
 		case SK.ReadonlyKeyword: return 'readonly';
@@ -197,10 +207,18 @@ const getOperator = (node: TypeOperatorTypeNode) =>{
 	}
 }
 
+/**
+ * A list of types to be ignored... perhaps I should build this into bySyntax
+ */
 const Ignores = new Set([
 	SK.MultiLineCommentTrivia
 ]);
 
+/**
+ * A default action 
+ * @param n 
+ * @returns 
+ */
 const defSig = (n: Nodely)=>{
 	if(!n || Ignores.has(n.getKind())) return '';
 	if(isPrimitive(n)) return $type(n.getText());
@@ -209,6 +227,11 @@ const defSig = (n: Nodely)=>{
 	return "";
 }
 
+/**
+ * Just a convenience method to make the same bySyntax method reusable. 
+ * @param node 
+ * @returns 
+ */
 const sig = (node: Nodely) =>  bySyntax(node, typingMap, defSig);
 /**
  * Once a full signature name is resolved the typing of the object will be necessary. This typing however will be different for different declaration type. As such I will be handling these similar to the SyntaxKind... I need a SyntaxKind switching function
@@ -218,9 +241,11 @@ export const getSignature = (node: Nodely) => {
 	return sig(node);
 }
 
-export const isPrimitiveType = (t: Type) => t.isAny() || t.isBigInt() || t.isNumber() || t.isBoolean() || t.isString() || t.isNever() || t.isUndefined() || t.isUnknown() || t.isNull();
-export const isPrimitiveLiteralType = (t: Type) => t.isStringLiteral() || t.isNumberLiteral() || t.isBoolean() || t.isBigIntLiteral();
-
+/**
+ * Diving down to the underlying type provides lower level access to the typing however ts-morph provides a wonderul interface via their Node class. Since it completely crawls the Source File it seems more suitable to get the dclaration that is being referenced 
+ * @param t 
+ * @returns 
+ */
 export const fromType = (t: Type | undefined):string => {
 	//a node does exist it is just in a body but the return type or type should have a symbol to said declaration... why write a second parser when syntaxKind parser is more convenient. 
 	const symbol = t?.getSymbol()?.getDeclarations()[0];
@@ -228,6 +253,12 @@ export const fromType = (t: Type | undefined):string => {
 	
 	return sig(symbol ?? aliasSymbol);
 }
+
+/**
+ * Attempts to get a type node from the types declaration.
+ * @param node 
+ * @returns 
+ */
 export const getSignatureFromType = (node: Nodely) => {
 	if(!node) return '';
 	const t = node.getType();
