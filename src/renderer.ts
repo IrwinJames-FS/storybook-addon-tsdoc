@@ -1,11 +1,11 @@
-import { ArrowFunction, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, ParameterDeclaration, PropertyDeclaration, PropertySignature, SourceFile, TypeParameterDeclaration } from "ts-morph";
+import { ArrowFunction, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, ParameterDeclaration, PropertyDeclaration, PropertySignature, SourceFile, Type, TypeParameterDeclaration } from "ts-morph";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $kd, $kind, $literal, $section } from "./decorators";
+import { $h, $href, $kd, $kind, $literal, $section, $type } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { getComments, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
+import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
 import { fromType, getModifiers, getSignature } from "./node-signature";
 import { STORY_BOOK_BLOCK } from "./constants";
 
@@ -20,7 +20,7 @@ import { STORY_BOOK_BLOCK } from "./constants";
 const renderFNDetails = (node: FunctionTypeNode | FunctionDeclaration | FunctionExpression | MethodDeclaration | MethodSignature | ArrowFunction) => {
 	const tp = build(...node.getTypeParameters());
 	const ag = build(...node.getParameters());
-	const rt = build(node.getReturnTypeNode()) || fromType(node.getType())
+	const rt = build(node.getReturnTypeNode()) || buildFromType(node.getReturnType());
 	return [
 		...tp ? [
 			$section(
@@ -227,8 +227,7 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.ClassExpression]:node => block(
 		$h(
 			2, 
-			node, 
-			$kd`class`, 
+			node,  
 			node.getName(),
 			getSignature(node)
 		),
@@ -261,6 +260,14 @@ const IGNOREKINDS = new Set([
 	SK.SingleLineCommentTrivia
 ]);
 
+export const buildFromType = (type: Type) => {
+	const node = declarationOfType(type);
+	if(!node) return;
+	if(type.isAnonymous()) return build(node);
+	const href = getDocPath(node)
+	
+	return href ? $href(getName(node), href):$type(getName(node));
+}
 /**
  * Builds based on a list of nodes. 
  * @param nodes 

@@ -1,4 +1,4 @@
-import { Node } from "ts-morph";
+import { Node, Type } from "ts-morph";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
@@ -201,4 +201,17 @@ export const renderCode = (code: string) => code ? `\`\`\`ts\n${createPrinter({r
 export const isStatic = (node: Node) => {
 	if(!Node.isStaticable(node)) return false;
 	return node.isStatic();
+}
+
+/**
+ * attempt to get a Node from the type declaration
+ * @param type
+ */
+export const declarationOfType = (type: Type, onlyAnonymous: boolean=false) => {
+	if(onlyAnonymous && !type.isAnonymous()) return; 
+	const [symbolDec] = type.getSymbol()?.getDeclarations() ?? [];
+	const [aliasDec] = type.getAliasSymbol()?.getDeclarations() ?? [];
+
+	console.log(type.getText(), type.isAnonymous(), !!symbolDec, !!aliasDec);
+	return symbolDec ?? aliasDec;
 }

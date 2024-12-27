@@ -248,10 +248,14 @@ export const getSignature = (node: Nodely) => {
  */
 export const fromType = (t: Type | undefined):string => {
 	//a node does exist it is just in a body but the return type or type should have a symbol to said declaration... why write a second parser when syntaxKind parser is more convenient. 
-	const symbol = t?.getSymbol()?.getDeclarations()[0];
-	const aliasSymbol = t?.getAliasSymbol()?.getDeclarations()[0];
+	const [symbol] = t?.getSymbol()?.getDeclarations() ?? [];
+	const [aliasSymbol] = t?.getAliasSymbol()?.getDeclarations() ?? [];
+	const node = symbol ?? aliasSymbol
+	if(t?.isAnonymous() || !node) return sig(node);
+	console.log(node);
+	const href = getDocPath(node)
 	
-	return sig(symbol ?? aliasSymbol);
+	return href ? $href(getName(node), href):$type(getName(node));
 }
 
 /**
