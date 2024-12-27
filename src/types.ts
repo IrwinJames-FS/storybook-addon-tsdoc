@@ -1,4 +1,4 @@
-import { Node } from "ts-morph"
+import { Node, Type } from "ts-morph"
 
 export type TSDocOptions = {
 	/**

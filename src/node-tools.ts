@@ -1,12 +1,11 @@
-import { Node } from "ts-morph";
-import { magenta } from "console-log-colors";
+import { Node, Type } from "ts-morph";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { cyan, green } from "console-log-colors";
 import { Nodely } from "./types";
 import { createPrinter, createSourceFile, ScriptKind, ScriptTarget } from "typescript";
-
+import { escape } from "./utils";
 interface Nameable extends Node {
 	getName():string
 }
@@ -119,22 +118,7 @@ export const getNearestName = (node?: Node) => {
 	}
 	return name;
 }
-function escape(str:string) {
-	const htmlEntities = {
-	  '<': '&lt;',
-	  '>': '&gt;',
-	  '&': '&amp;',
-	  '"': '&quot;',
-	  "'": '&apos;',
-	  '/': '&#47;',
-	  '\\': '&#92;',
-	  '{': '&#123;',
-	  '}': '&#125;',
-	  '`': '&#96;'
-	};
-	
-	return str.replace(/[<>&"'/\\{}`]/g, char => htmlEntities[char as keyof typeof htmlEntities]);
-}
+
 export const getFName = (node: Node) => {
 	const [pre,post] = bySyntax(node, ModMap, n=>{
 		if(!n) return ['','', []]
@@ -160,6 +144,11 @@ export const getDocPath = (node: Node): string | undefined => {
 	return TS.resolveDocPath(ref)+(fn ? '#'+fn.toLowerCase():'')
 }
 
+/**
+ * With there being 4 to 5 different method like declarations it seems like a good way to reduce redundant code. 
+ * @param node 
+ * @returns 
+ */
 export const isMethodLike = (node?: Node): boolean => {
 	if(!node) return false;
 	const k = node.getKind();
@@ -209,3 +198,20 @@ export const getExample = (node: Node) => {
 
 export const renderCode = (code: string) => code ? `\`\`\`ts\n${createPrinter({removeComments: false}).printFile(createSourceFile("t.ts", code, ScriptTarget.Latest, false, ScriptKind.TS))}\n\`\`\``:'';
 
+export const isStatic = (node: Node) => {
+	if(!Node.isStaticable(node)) return false;
+	return node.isStatic();
+}
+
+/**
+ * attempt to get a Node from the type declaration
+ * @param type
+ */
+export const declarationOfType = (type: Type, onlyAnonymous: boolean=false) => {
+	if(onlyAnonymous && !type.isAnonymous()) return; 
+	const [symbolDec] = type.getSymbol()?.getDeclarations() ?? [];
+	const [aliasDec] = type.getAliasSymbol()?.getDeclarations() ?? [];
+
+	console.log(type.getText(), type.isAnonymous(), !!symbolDec, !!aliasDec);
+	return symbolDec ?? aliasDec;
+}
