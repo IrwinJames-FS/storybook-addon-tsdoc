@@ -46,8 +46,8 @@ describe(`Test each decorator method to ensure it works appropriately`, ()=>{
 </div>`);
 	expect(h2).toBe( `<div className="ts-doc-header-wrapper">
 
-<h1 className="ts-doc-header">value</h1>
-	
+<h2 className="ts-doc-header">value</h2>
+
 </div>`);
 	});
 

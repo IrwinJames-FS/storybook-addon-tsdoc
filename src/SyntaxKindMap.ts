@@ -1,5 +1,6 @@
 import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
+import { Nodely } from "./types";
 export interface SyntaxKindTypeMap<T=never> {
 	[SK.SourceFile]: SourceFile
 	[SK.SyntaxList]: SyntaxList
@@ -78,7 +79,8 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.ExpressionStatement]: ExpressionStatement,
 	[SK.PropertyAssignment]: PropertyAssignment,
 	[SK.NewExpression]: NewExpression,
-	[SK.ObjectKeyword]: Expression
+	[SK.ObjectKeyword]: Expression,
+	[1337]: Node
 }
 
 export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
@@ -159,5 +161,8 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.ExpressionStatement]: Node.isExpressionStatement,
 	[SK.PropertyAssignment]: Node.isPropertyAssignment,
 	[SK.NewExpression]: Node.isNewExpression,
-	[SK.ObjectKeyword]: Node.isObjectKeyword
+	[SK.ObjectKeyword]: Node.isObjectKeyword,
+	[1337]: (node: Nodely):node is Node=>{
+		return false;
+	}
 };
