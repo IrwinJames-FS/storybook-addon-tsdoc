@@ -251,8 +251,15 @@ export const fromType = (t: Type | undefined):string => {
 	const [symbol] = t?.getSymbol()?.getDeclarations() ?? [];
 	const [aliasSymbol] = t?.getAliasSymbol()?.getDeclarations() ?? [];
 	const node = symbol ?? aliasSymbol
-	if(t?.isAnonymous() || !node) return sig(node);
-	console.log(node);
+	if(t?.isAnonymous()) return sig(node);
+	if(!node) return '';
+	console.log(node.getKindName(), Node.isExpression(node))
+	if(Node.isExpression(node)) {
+		const p = node.getParent();
+		if(!p) return '';
+		const href = getDocPath(p);
+		return href ? $href(getName(p), href):$type(getName(p));
+	}
 	const href = getDocPath(node)
 	
 	return href ? $href(getName(node), href):$type(getName(node));

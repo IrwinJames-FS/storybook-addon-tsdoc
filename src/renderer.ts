@@ -248,7 +248,7 @@ const RENDER_MAP: SKindMap<string> = {
 		$h(4, node, $kd`property`, getSignature(node)),
 		getComments(node),
 		getExample(node),
-		build()
+		build(node.getInitializer())
 	),
 	[SK.NewExpression]: ()=>``
 };
@@ -264,9 +264,15 @@ export const buildFromType = (type: Type) => {
 	const node = declarationOfType(type);
 	if(!node) return;
 	if(type.isAnonymous()) return build(node);
-	const href = getDocPath(node)
+	if(Node.isExpression(node)){
+		const p = node.getParent();
+		if(!p) return '';
+		const href = getDocPath(p);
+		return `<h4 className="ts-doc-header">${href ? $href(getName(p), href):$type(getName(p))}</h4>`;
+	}
+	const href = getDocPath(node);
 	
-	return href ? $href(getName(node), href):$type(getName(node));
+	return `<h4 className="ts-doc-header">${href ? $href(getName(node), href):$type(getName(node))}</h4>`;
 }
 /**
  * Builds based on a list of nodes. 
