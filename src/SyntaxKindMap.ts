@@ -77,7 +77,8 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.ClassExpression]: ClassExpression,
 	[SK.ExpressionStatement]: ExpressionStatement,
 	[SK.PropertyAssignment]: PropertyAssignment,
-	[SK.NewExpression]: NewExpression
+	[SK.NewExpression]: NewExpression,
+	[SK.ObjectKeyword]: Expression
 }
 
 export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
@@ -157,5 +158,6 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.ClassExpression]: Node.isClassExpression,
 	[SK.ExpressionStatement]: Node.isExpressionStatement,
 	[SK.PropertyAssignment]: Node.isPropertyAssignment,
-	[SK.NewExpression]: Node.isNewExpression
+	[SK.NewExpression]: Node.isNewExpression,
+	[SK.ObjectKeyword]: Node.isObjectKeyword
 };

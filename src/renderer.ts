@@ -110,6 +110,7 @@ const RENDER_MAP: SKindMap<string> = {
 	//unlike the method signature
 	[SK.FunctionType]: node=>block(...renderFNDetails(node)),
 	[SK.ArrowFunction]: node => block(...renderFNDetails(node)),
+	[SK.FunctionExpression]: node => block(...renderFNDetails(node)),
 	[SK.MethodDeclaration]: node=>{
 		return block(
 			$h(4, node, $kd`${node.isStatic() ? 'static ':''}method`, node.getName(), ':', getSignature(node)),
@@ -250,7 +251,11 @@ const RENDER_MAP: SKindMap<string> = {
 		getExample(node),
 		build(node.getInitializer())
 	),
-	[SK.NewExpression]: ()=>``
+	[SK.NewExpression]: ()=>``,
+	[SK.ObjectKeyword]: ()=>'',
+	[SK.TypePredicate]: ()=>'',
+	[SK.CallExpression]: ()=>'',
+	[SK.BinaryExpression]: ()=>''
 };
 
 //Again a way to ignore or not alert me of lacking support. it seems there should be an interface for this. 

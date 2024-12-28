@@ -98,7 +98,7 @@ const typingMap: SKindMap<string> = {
 	[SK.ArrayBindingPattern]: node => genTypes(node.getElements(), '[',']'),
 	[SK.QualifiedName]: node => `${sig(node.getLeft())}.${sig(node.getRight())}`,
 	[SK.TypePredicate]: node => `${sig(node.getParameterNameNode())} ${node.hasAssertsModifier() ? sig(node.getAssertsModifier()):'is'} ${sig(node.getTypeNode())}`,
-	[SK.TypeOperator]: node => `${$kind(getOperator(node))} ${fromTypeNode}`,
+	[SK.TypeOperator]: node => `${$kind(getOperator(node))} ${fromTypeNode(node)}`,
 	[SK.BinaryExpression]: node => `${sig(node.getLeft())} ${sig(node.getOperatorToken())} ${sig(node.getRight())}`,
 	[SK.CallExpression]: node => $type(escape(node.getReturnType().getText())),
 	[SK.IndexedAccessType]: node => `${sig(node.getObjectTypeNode())}[${node.getIndexTypeNode()}]`,
@@ -178,7 +178,8 @@ const typingMap: SKindMap<string> = {
 		return sig(init);
 	},
 	[SK.PropertyAssignment]: node => `${sig(node.getNameNode())}: ${fromTypeNode(node)}`,
-	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`
+	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`,
+	[SK.ObjectKeyword]: node => `&lcub;&rcub;`
 }
 
 /**
@@ -253,7 +254,6 @@ export const fromType = (t: Type | undefined):string => {
 	const node = symbol ?? aliasSymbol
 	if(t?.isAnonymous()) return sig(node);
 	if(!node) return '';
-	console.log(node.getKindName(), Node.isExpression(node))
 	if(Node.isExpression(node)) {
 		const p = node.getParent();
 		if(!p) return '';
