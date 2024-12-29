@@ -9,12 +9,16 @@ import { Nodely } from "./types";
  * @param defaultFN 
  * @returns 
  */
-export const bySyntax = <T>(node: Nodely, skMap: Partial<SyntaxKindMap<T>>, defaultFN: (node: Nodely)=>T): T => {
+export const bySyntax = <T>(
+	node: Nodely, 
+	skMap: Partial<SyntaxKindMap<T>>, 
+	defaultFN: (node: Nodely)=>T): T => {
 	if(!node) return defaultFN(node);
 	const k = node.getKind();
 	if(!(k in SyntaxKindDelegator)) {
 		return defaultFN(node);
 	}
+	//these methods force type casting 
 	if(!SyntaxKindDelegator[k as keyof SyntaxKindValidatorMap](node)) return defaultFN(node);
 	const entry = skMap[k as keyof SyntaxKindMap<T>];
 	if(!entry) return defaultFN(node);

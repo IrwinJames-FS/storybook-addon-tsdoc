@@ -30,7 +30,7 @@ I think having a method that better at differenciating such things.
 */
 
 import { getDocPath, getFullName, getName, getTypeNode, isPrimitive } from "./node-tools";
-import { ArrowFunction, ClassDeclaration, ClassExpression, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, ModifierableNode, Node, Type, TypeOperatorTypeNode } from "ts-morph";
+import { ArrowFunction, ClassDeclaration, ClassExpression, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, ModifierableNode, Node, Symbol, Type, TypeOperatorTypeNode } from "ts-morph";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
 import { $href, $kd, $kind, $literal, $name, $type } from "./decorators";
@@ -66,11 +66,6 @@ const isGenerator = (node: Node) => {
 
 const fnSignature = (node: FunctionDeclaration | FunctionExpression | MethodDeclaration | FunctionTypeNode | MethodSignature | ArrowFunction) => `${isAsync(node) ? 'async ':''}${isGenerator(node) ? '*':''}${genTypes(node.getTypeParameters())}(${genTypes(node.getParameters(), '', '')}) =&gt; ${sig(node.getReturnTypeNode()) || fromType(node.getReturnType()) || $literal('void')}`;
 
-const classSignatue = (node: ClassDeclaration | ClassExpression) => {
-	const extensions = sig(node.getExtends());
-	const implementions = node.getImplements().map(i=>sig(i)).join(', ');
-	return `${extensions ? ' extends '+ extensions:''}${implementions ? ' implements ' + implementions:''}`
-}
 const typingMap: SKindMap<string> = {
 	//functional declarations
 	[SK.FunctionDeclaration]: fnSignature,
@@ -87,7 +82,7 @@ const typingMap: SKindMap<string> = {
 	[SK.IntersectionType]: node=>node.getTypeNodes().map(sig).join(' & '),
 	[SK.NamedTupleMember]: node=>`${$name(node.getName())}: ${fromTypeNode(node)}`,
 	[SK.ArrayType]: node=>`${sig(node.getElementTypeNode())}[]`,
-	[SK.ArrayLiteralExpression]: ()=>'[]',
+	[SK.ArrayLiteralExpression]: node=>`[${node.getElements().map(sig)}]`,
 	[SK.TupleType]: node=> genTypes(node.getElements(), '[',']'),
 	[SK.ParenthesizedType]: node=>`(${fromTypeNode(node)})`,
 	[SK.Constructor]: node=>`${$type("new")} (${node.getParameters().map(p=>sig(p)).join(', ')})=>${$type(getName(node.getParent()))}`,
@@ -98,7 +93,7 @@ const typingMap: SKindMap<string> = {
 	[SK.ArrayBindingPattern]: node => genTypes(node.getElements(), '[',']'),
 	[SK.QualifiedName]: node => `${sig(node.getLeft())}.${sig(node.getRight())}`,
 	[SK.TypePredicate]: node => `${sig(node.getParameterNameNode())} ${node.hasAssertsModifier() ? sig(node.getAssertsModifier()):'is'} ${sig(node.getTypeNode())}`,
-	[SK.TypeOperator]: node => `${$kind(getOperator(node))} ${fromTypeNode}`,
+	[SK.TypeOperator]: node => `${$kind(getOperator(node))} ${fromTypeNode(node)}`,
 	[SK.BinaryExpression]: node => `${sig(node.getLeft())} ${sig(node.getOperatorToken())} ${sig(node.getRight())}`,
 	[SK.CallExpression]: node => $type(escape(node.getReturnType().getText())),
 	[SK.IndexedAccessType]: node => `${sig(node.getObjectTypeNode())}[${node.getIndexTypeNode()}]`,
@@ -168,8 +163,9 @@ const typingMap: SKindMap<string> = {
 	},
 	[SK.GetAccessor]: node=> {
 		const rtn = node.getReturnTypeNode();
+		console.log("This is happening", node.getReturnType().getText());
 		return rtn ? sig(rtn)
-		: getSignatureFromType(node) ?? ''
+		: fromType(node.getReturnType())
 	},
 	[SK.VariableDeclaration]: node => {
 		const tn = fromTypeNode(node);
@@ -178,7 +174,13 @@ const typingMap: SKindMap<string> = {
 		return sig(init);
 	},
 	[SK.PropertyAssignment]: node => `${sig(node.getNameNode())}: ${fromTypeNode(node)}`,
-	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`
+	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`,
+	[SK.ObjectKeyword]: node => `&lcub;&rcub;`,
+	[SK.StringLiteral]: node => $literal(escape(node.getText())),
+	[SK.NumericLiteral]: node=> $literal(node.getText()),
+	[SK.BigIntLiteral]: node=>$literal(node.getText()),
+	[SK.TrueKeyword]: node=>$literal(node.getText()),
+	[SK.FalseKeyword]: node=>$literal(node.getText())
 }
 
 /**
@@ -248,23 +250,33 @@ export const getSignature = (node: Nodely) => {
  */
 export const fromType = (t: Type | undefined):string => {
 	//a node does exist it is just in a body but the return type or type should have a symbol to said declaration... why write a second parser when syntaxKind parser is more convenient. 
+	if(t?.isArray()){
+		return fromType(t.getArrayElementType())
+	}
 	const [symbol] = t?.getSymbol()?.getDeclarations() ?? [];
 	const [aliasSymbol] = t?.getAliasSymbol()?.getDeclarations() ?? [];
 	const node = symbol ?? aliasSymbol
 	if(t?.isAnonymous()) return sig(node);
+	
 	if(!node) return '';
-	console.log(node.getKindName(), Node.isExpression(node))
+
+	const args = Node.isParametered(node) ? node.getParameters().map(sig):[]
+
 	if(Node.isExpression(node)) {
 		const p = node.getParent();
 		if(!p) return '';
 		const href = getDocPath(p);
-		return href ? $href(getName(p), href):$type(getName(p));
+		return href ? $href(getName(p), href):$literal(getName(p))+(args.join(',').wrap('<','>'));;
 	}
 	const href = getDocPath(node)
 	
-	return href ? $href(getName(node), href):$type(getName(node));
+	return (href ? $href(getName(node), href):$literal(getName(node)))+(args.join(',').wrap('<','>'));
 }
 
+export const fromSymbol = (symbol?: Symbol) => {
+	console.log(symbol?.getName(), );
+	return '';
+}
 /**
  * Attempts to get a type node from the types declaration.
  * @param node 

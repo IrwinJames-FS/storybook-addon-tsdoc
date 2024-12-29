@@ -60,7 +60,10 @@ export type Headings =  1 | 2 | 3 | 4 | 5 | 6;
  * @param content 
  * @returns 
  */
-export const $h = (s: Headings,node: Nodely, ...content: unknown[]) => `<div className="ts-doc-header-wrapper">
+export const $h = (
+	s: Headings,
+	node: Nodely,
+	...content: unknown[]) => `<div className="ts-doc-header-wrapper">
 
 <h${s} className="ts-doc-header">${content.join(' ')}</h${s}>
 
