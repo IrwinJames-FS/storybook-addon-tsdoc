@@ -9,10 +9,9 @@
     "declaration": true,
     "outDir": "dist"
   },
-  "include": [
-    "src/**/*.ts"
-, "src/SKManager"  ],
+  "include": [ "src/**/*.ts"  ],
   "exclude": [
     "node_modules",
+    "src/tests"
   ]
 }

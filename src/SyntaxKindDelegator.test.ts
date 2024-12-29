@@ -19,10 +19,9 @@ describe(`Test the bySyntax delegator`, () => {
 		bySyntax(src2, {}, n=>expect(n?.getKind()).toBe(1337));
 		bySyntax(src4, {}, n=>expect(n?.getKind()).toBe(1338));
 		const val3 = bySyntax(undefined, {}, n=>expect(n).toBeUndefined());
-		
 		const val4 = bySyntax(src, {}, n=>expect(n?.getKind()).toBe(SK.SourceFile))
 		const val5 = bySyntax(src3, {
-			[SK.VariableDeclaration]: node=>console.log(Node.isVariableDeclaration(node))
+			[SK.VariableDeclaration]: node=>expect(Node.isVariableDeclaration(node)).toBeTruthy()
 		}, n=>expect(n?.getKind()).toBe(SK.VariableDeclaration))
 	})
 })

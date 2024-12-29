@@ -1,4 +1,4 @@
-import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
+import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BigIntLiteral, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FalseLiteral, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TrueLiteral, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
 import { Nodely } from "./types";
 export interface SyntaxKindTypeMap<T=never> {
@@ -80,6 +80,9 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.PropertyAssignment]: PropertyAssignment,
 	[SK.NewExpression]: NewExpression,
 	[SK.ObjectKeyword]: Expression,
+	[SK.BigIntLiteral]: BigIntLiteral,
+	[SK.TrueKeyword]: TrueLiteral,
+	[SK.FalseKeyword]: FalseLiteral,
 	[1337]: Node
 }
 
@@ -162,6 +165,9 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.PropertyAssignment]: Node.isPropertyAssignment,
 	[SK.NewExpression]: Node.isNewExpression,
 	[SK.ObjectKeyword]: Node.isObjectKeyword,
+	[SK.BigIntLiteral]: Node.isBigIntLiteral,
+	[SK.TrueKeyword]: Node.isTrueLiteral,
+	[SK.FalseKeyword]: Node.isFalseLiteral,
 	[1337]: (node: Nodely):node is Node=>{
 		return false;
 	}
