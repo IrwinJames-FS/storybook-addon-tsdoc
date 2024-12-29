@@ -3,10 +3,10 @@ import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $href, $kd, $kind, $literal, $section, $type } from "./decorators";
+import { $h, $href, $kd, $kind, $link, $s, $section, $t, $type } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
-import { fromType, getModifiers, getSignature } from "./node-signature";
+import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, getTypeNode, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
+import { fromType, getModifiers, getSignature, getSignatureFromType } from "./node-signature";
 import { STORY_BOOK_BLOCK } from "./constants";
 
 
@@ -53,54 +53,61 @@ const renderFNDetails = (node: FunctionTypeNode | FunctionDeclaration | Function
  */
 const block = (...blocks: string[]) => blocks.filter(b=>b.trim()).join('\n');
 
-const renderTyped = <T extends NamedTupleMember | PropertySignature | PropertyDeclaration>(kind: string | ((node: T)=>string))=>(node: T) => {
-	const tn = node.getTypeNode();
-	const typed = build(tn);
-	return block(
-		$h(4, node, isStatic(node) ? $kd`static`:'', $kind(typeof kind === 'string' ? kind:kind(node)), getModifiers(node), node.getName(), node.hasQuestionToken() ? '?':'', ':', getSignature(tn)),
-		getComments(node),
-		getExample(node),
-		typed ? $section(typed):''
-	)
-}
+/**
+ * Just a convenience to be used to generate a section from a node or nodes if any content is generated.
+ * @param nodes 
+ * @returns 
+ */
+const $sec = (...nodes: Nodely[]) => $section(build(...nodes));
 
+/**
+ * This method will act as a central point to interface with JSDocs. 
+ * 
+ * *note:* Some tags will require more integrated support and at this time I am still deciding on the precedent JSDoc should get vs typescript declarations.
+ * 
+ * But this is a place I can modify the code for all doc blocks in a centeral location 
+ * @param node 
+ * @returns 
+ */
+const getDocs = (node: Node)=>block(getComments(node), getExample(node));
 /**
  * Tweaking node handling via syntax kind
  */
 const RENDER_MAP: SKindMap<string> = {
-	[SK.TypeAliasDeclaration]: node => {
-		const tn = node.getTypeNode();
-		const args = node.getTypeParameters();
-		const tArgs = build(...args);
-		const typed = build();
-		return block(
-			$h(2, node, $kd`type`, node.getName()+`${args.map(getSignature).join(', ').wrap('<', '>')}`, ':', getSignature(tn)),
-			getComments(node),
-			getExample(node),
-			tArgs ? $section(tArgs):'',
-			typed ? $section(typed):''
-		);
-	},
-	[SK.TupleType]: node => build(...node.getElements()),
-	[SK.NamedTupleMember]: renderTyped('tuple item'),
-	[SK.TypeLiteral]: node => {
-		const properties = node.getProperties();
-		const methods = node.getMethods();
-		return block(
-			properties.length ? $section(
-				$h(5, undefined, 'Properties:'),
-				build(...properties)
-			):'',
-			methods.length ? $section(
-				$h(5, undefined, 'Methods:'),
-				build(...methods)
-			):''
+	[SK.TypeAliasDeclaration]: node => block(
+		$s(2, 'type', node),
+		getDocs(node),
+		$sec(
+			...node.getTypeParameters(),
+			node.getTypeNode()
 		)
+	),
+	[SK.TupleType]: node => build(...node.getElements()),
+	[SK.NamedTupleMember]: node=>block(
+		$s(4, 'tuple item', node),
+		getDocs(node),
+		$section(build(node.getTypeNode()))
+	),
+	[SK.TypeLiteral]: node => {
+		const members = build(...node.getMembers());
+		return members ? $section(
+			$t(4)`Members: `,
+			members
+		):''
 	},
-	[SK.PropertySignature]: renderTyped(n=>isMethodLike(n.getTypeNode()) ? 'method':'property'),
-	[SK.PropertyDeclaration]: renderTyped(n=>isMethodLike(n.getTypeNode()) ? 'method':'property'),
+	[SK.PropertySignature]: node=>block(
+		$s(4, 'property', node),
+		getDocs(node),
+		$sec(getTypeNode(node)),
+	),
+	[SK.PropertyDeclaration]: node=>block(
+		$s(4, 'property', node),
+		getDocs(node),
+		$sec(getTypeNode(node)),
+	),
 	[SK.MethodSignature]: node=>{
 		return block(
+			$s(4, 'method', node),
 			$h(4, node, $kd`method`, node.getName(), ':', getSignature(node)),
 			getComments(node),
 			getExample(node),
@@ -269,15 +276,7 @@ export const buildFromType = (type: Type) => {
 	const node = declarationOfType(type);
 	if(!node) return;
 	if(type.isAnonymous()) return build(node);
-	if(Node.isExpression(node)){
-		const p = node.getParent();
-		if(!p) return '';
-		const href = getDocPath(p);
-		return `<h4 className="ts-doc-header">${href ? $href(getName(p), href):$type(getName(p))}</h4>`;
-	}
-	const href = getDocPath(node);
-	
-	return `<h4 className="ts-doc-header">${href ? $href(getName(node), href):$type(getName(node))}</h4>`;
+	return `<h4 className="ts-doc-header">${fromType(type)}</h4>`;
 }
 /**
  * Builds based on a list of nodes. 

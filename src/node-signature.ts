@@ -30,10 +30,10 @@ I think having a method that better at differenciating such things.
 */
 
 import { getDocPath, getFullName, getName, getTypeNode, isPrimitive } from "./node-tools";
-import { ArrowFunction, ClassDeclaration, ClassExpression, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, ModifierableNode, Node, Symbol, Type, TypeOperatorTypeNode } from "ts-morph";
+import { ArrowFunction, ClassDeclaration, ClassExpression, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, ModifierableNode, Node, PropertyDeclaration, PropertySignature, Symbol, Type, TypeOperatorTypeNode } from "ts-morph";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $href, $kd, $kind, $literal, $name, $type } from "./decorators";
+import { $href, $kd, $kind, $link, $literal, $name, $t, $type } from "./decorators";
 import { gray, yellow } from "console-log-colors";
 import { Nodely } from "./types";
 import TS from "./TS";
@@ -63,6 +63,12 @@ const isGenerator = (node: Node) => {
 	if(!('isGenerator' in node) || typeof node.isGenerator !== 'function') return false;
 	return node.isGenerator();
 }
+/**
+ * These two declaration types share a common signature. no point in repeating myself. 
+ * @param node 
+ * @returns 
+ */
+const propertyDecSig = (node: PropertyDeclaration | PropertySignature) => `${node.getModifiers().join(', ').wrap('', ' ')}${sig(node.getNameNode())}${node.hasQuestionToken() ? '?':''}: ${fromTypeNode(node)}`;
 
 const fnSignature = (node: FunctionDeclaration | FunctionExpression | MethodDeclaration | FunctionTypeNode | MethodSignature | ArrowFunction) => `${isAsync(node) ? 'async ':''}${isGenerator(node) ? '*':''}${genTypes(node.getTypeParameters())}(${genTypes(node.getParameters(), '', '')}) =&gt; ${sig(node.getReturnTypeNode()) || fromType(node.getReturnType()) || $literal('void')}`;
 
@@ -74,13 +80,15 @@ const typingMap: SKindMap<string> = {
 	[SK.FunctionType]: fnSignature,
 	[SK.MethodSignature]: fnSignature,
 	[SK.ArrowFunction]: fnSignature,
-	[SK.PropertySignature]: fromTypeNode,
+	[SK.PropertySignature]: propertyDecSig,
+	[SK.PropertyDeclaration]: propertyDecSig,
+	[SK.PropertyAssignment]: node => `${sig(node.getNameNode())}${node.hasQuestionToken() ? '?':''}: ${fromTypeNode(node)}`,
+	[SK.NamedTupleMember]: node=>`${node.getDotDotDotToken() ? '...':''}${sig(node.getNameNode())}${node.hasQuestionToken() ? '?':''}: ${fromTypeNode(node)}`,
 	[SK.BindingElement]: fromTypeNode,
 	[SK.PropertyAccessExpression]: node => `${sig(node.getNameNode())}`,
 	[SK.UnionType]: node=>node.getTypeNodes().map(sig).join(' | '),
 	[SK.LiteralType]: node=>$literal(node.getText()),
 	[SK.IntersectionType]: node=>node.getTypeNodes().map(sig).join(' & '),
-	[SK.NamedTupleMember]: node=>`${$name(node.getName())}: ${fromTypeNode(node)}`,
 	[SK.ArrayType]: node=>`${sig(node.getElementTypeNode())}[]`,
 	[SK.ArrayLiteralExpression]: node=>`[${node.getElements().map(sig)}]`,
 	[SK.TupleType]: node=> genTypes(node.getElements(), '[',']'),
@@ -120,7 +128,9 @@ const typingMap: SKindMap<string> = {
 	[SK.LessThanEqualsToken]: ()=>'&lt;=',
 	[SK.GreaterThanToken]: ()=>'&gt;',
 	[SK.GreaterThanEqualsToken]: ()=>'&gt;=',
-	[SK.TypeAliasDeclaration]: (node)=>`${genTypes(node.getTypeParameters())}: ${fromTypeNode(node)}`,
+	[SK.TypeAliasDeclaration]: (node)=>{
+		return `${node.getName()}${genTypes(node.getTypeParameters())}: ${fromTypeNode(node)}`;
+	},
 	[SK.TypeReference]: node=>{ 
 		const typeName = node.getTypeName();
 		const args = node.getTypeArguments();
@@ -169,11 +179,8 @@ const typingMap: SKindMap<string> = {
 	},
 	[SK.VariableDeclaration]: node => {
 		const tn = fromTypeNode(node);
-		if(tn) return tn;
-		const init = node.getInitializer();
-		return sig(init);
+		return tn ?? '';
 	},
-	[SK.PropertyAssignment]: node => `${sig(node.getNameNode())}: ${fromTypeNode(node)}`,
 	[SK.NewExpression]: node => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`,
 	[SK.ObjectKeyword]: node => `&lcub;&rcub;`,
 	[SK.StringLiteral]: node => $literal(escape(node.getText())),
@@ -243,38 +250,86 @@ export const getSignature = (node: Nodely) => {
 	return sig(node);
 }
 
+const isPrimitiveType = (t: Type) => t.isAny() || t.isBigInt() || t.isNever() || t.isNull() || t.isNumber() || t.isString() || t.isBoolean();
+
+const isPrimitiveLiteral = (t: Type) => t.isBigIntLiteral() || t.isNumberLiteral() || t.isStringLiteral() || t.isTemplateLiteral();
+
+/**
+ * A utility method allowing me to add in a method to log information when an area that lacks support is encountered. 
+ * @param log 
+ * @param retVal 
+ * @returns 
+ */
+const logRet = <T>(log: ()=>void, retVal: T): T => {
+	log();
+	return retVal;
+}
+
+/**
+ * This is a method to catch a link before is object generalizes it
+ * @param t 
+ */
+const fromTypeRef = (t: Type) => {
+	const symbol = t.getSymbol()
+	const [dec] = symbol?.getDeclarations() ?? [];
+	
+	if(!dec) return '';
+	//symbols have access to the closest doc tags... this may be a good place to refer to said tags when building out tag support.
+	const args = t.getTypeArguments().map(fromType).filter(n=>!!n).join(', ').wrap('<', '>');
+	
+	return $link(dec) + args;
+}
+const logTypeInfo = (t: Type) => {
+	console.log(t.getText(), `
+isAny: ${t.isAny()}
+isAnonymous: ${t.isAnonymous()}
+isArray: ${t.isArray()}
+isBigInt: ${t.isBigInt()}
+isBigIntLiteral: ${t.isBigIntLiteral()}
+isBoolean: ${t.isBoolean()}
+isClass: ${t.isClass()}
+isClassOrInterface: ${t.isClassOrInterface()}
+isEnum: ${t.isEnum()}
+isEnumLiteral: ${t.isEnumLiteral()}
+isInterface: ${t.isInterface()}
+isIntersection: ${t.isIntersection()}
+isLiteral: ${t.isLiteral()}
+isNever: ${t.isNever()}
+isNull: ${t.isNull()}
+isNullable: ${t.isNullable()}
+isNumber: ${t.isNumber()}
+isNumberLiteral: ${t.isNumberLiteral()}
+isObject:${t.isObject()}
+isReadOnlyArray: ${t.isReadonlyArray()}
+isString: ${t.isString()}
+isStringLiteral: ${t.isStringLiteral()}
+isTemplateLiteral: ${t.isTemplateLiteral()}
+isTuple: ${t.isTuple()}
+isTypeParameter:${t.isTypeParameter()}
+isUndefined:${t.isUndefined()}
+isUnion: ${t.isUnion()}
+isUnionOrIntersection: ${t.isUnionOrIntersection()}
+isUnknown:${t.isUnknown()}
+isVoid:${t.isVoid()}`)
+}
 /**
  * Diving down to the underlying type provides lower level access to the typing however ts-morph provides a wonderul interface via their Node class. Since it completely crawls the Source File it seems more suitable to get the dclaration that is being referenced 
  * @param t 
  * @returns 
  */
 export const fromType = (t: Type | undefined):string => {
-	//a node does exist it is just in a body but the return type or type should have a symbol to said declaration... why write a second parser when syntaxKind parser is more convenient. 
-	if(t?.isArray()){
-		return fromType(t.getArrayElementType())
-	}
-	const [symbol] = t?.getSymbol()?.getDeclarations() ?? [];
-	const [aliasSymbol] = t?.getAliasSymbol()?.getDeclarations() ?? [];
-	const node = symbol ?? aliasSymbol
-	if(t?.isAnonymous()) return sig(node);
-	
-	if(!node) return '';
-
-	const args = Node.isParametered(node) ? node.getParameters().map(sig):[]
-
-	if(Node.isExpression(node)) {
-		const p = node.getParent();
-		if(!p) return '';
-		const href = getDocPath(p);
-		return href ? $href(getName(p), href):$literal(getName(p))+(args.join(',').wrap('<','>'));;
-	}
-	const href = getDocPath(node)
-	
-	return (href ? $href(getName(node), href):$literal(getName(node)))+(args.join(',').wrap('<','>'));
+	if(!t) return '';
+	//logTypeInfo(t);
+	return isPrimitiveType(t) ? $type(t.getText())
+	: isPrimitiveLiteral(t) ? $literal(escape(t.getText()))
+	: t.isArray() ? fromType(t.getArrayElementType()).wrap('', '[]')
+	: t.isObject() ? t.isAnonymous() ? $literal(typelit):fromTypeRef(t)
+	: logRet(()=>{
+		console.log("Type parsing missing support", t.getText(), t.isObject(), t.isLiteral());
+	}, '');
 }
 
 export const fromSymbol = (symbol?: Symbol) => {
-	console.log(symbol?.getName(), );
 	return '';
 }
 /**
@@ -285,5 +340,6 @@ export const fromSymbol = (symbol?: Symbol) => {
 export const getSignatureFromType = (node: Nodely) => {
 	if(!node) return '';
 	const t = node.getType();
-	return fromType(t);
+	const tp = fromType(t)
+	return tp;
 }

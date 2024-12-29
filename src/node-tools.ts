@@ -103,9 +103,9 @@ const ModMap: SKindMap<Modificator> = {
 	}
 }
 
-export const getTypeNode = (node?: Node) => Node.isTyped(node) ? node.getTypeNode()
-	//: (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node)) ? node.getInitializer()
-	: undefined;
+export const getTypeNode = (node?: Node) => (Node.isTyped(node) && node.getTypeNode())
+	|| (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node) ? node.getInitializer()
+	:undefined)
 /**
  * In some cases the named node is the parent node of the evaluated node this just climbs the node tree until it finds a name
  * @param node 
@@ -211,7 +211,5 @@ export const declarationOfType = (type: Type, onlyAnonymous: boolean=false) => {
 	if(onlyAnonymous && !type.isAnonymous()) return; 
 	const [symbolDec] = type.getSymbol()?.getDeclarations() ?? [];
 	const [aliasDec] = type.getAliasSymbol()?.getDeclarations() ?? [];
-
-	console.log(type.getText(), type.isAnonymous(), !!symbolDec, !!aliasDec);
 	return symbolDec ?? aliasDec;
 }
