@@ -1,4 +1,4 @@
-import { Node, Type } from "ts-morph";
+import { JSDoc, Node, Type } from "ts-morph";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
@@ -6,6 +6,8 @@ import { cyan, green } from "console-log-colors";
 import { Nodely } from "./types";
 import { createPrinter, createSourceFile, ScriptKind, ScriptTarget } from "typescript";
 import { escape } from "./utils";
+import { $kd, $t } from "./decorators";
+import { getSignature } from "./node-signature";
 interface Nameable extends Node {
 	getName():string
 }
@@ -64,8 +66,25 @@ export const getSignatureName = (node:Node, delim:string=".") => {
 
 export const getJsDocs = (node: Node) => Node.isJSDocable(node) ? node.getJsDocs():[];
 
+/**
+ * Instead it seems better to just support JSDoc separately from the built in typing. As I integrate properties into the signature process I can omit them from here.
+ */
+export const OMITTED_TAGS = new Set([
+	"example"
+]);
+/**
+ * This method is to simplify some of the tag parsing into one place. however with some tags being designed to affect the actual typing in the linter and editor I need to experiment with how these tags effect typescript in different environments.
+ * 
+ * To be clear this will only parse tags that just need to be displayed but do not effect the typing of the object.
+ * @param doc 
+ */
+export const parseTags = (doc: JSDoc) => doc.getTags().filter(t=>!OMITTED_TAGS.has(t.getTagName())).map(t=>$t(6)`${$kd`&#64;${t.getTagName()}`} ${Node.isJSDocTypeTag(t) ? ' : '+getSignature(t.getTypeExpression()?.getTypeNode()):''} ${t.getCommentText()}`).join('\n');
+export const parseDoc = (doc: JSDoc) => {
+	const tags = parseTags(doc);
+	return doc.getComment()+(tags ? '\n\n'+tags+'\n---\n':'');
+}
 
-export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(j=>j.getComment()).join('\n')+'\n';
+export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(parseDoc).join('\n')+'\n';
 /**
  * Converts the ancestors into a family name.
  * @param node 
