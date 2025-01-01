@@ -2,6 +2,7 @@ import { Node } from "ts-morph";
 import { getDocPath, getFullName, getName } from "./node-tools";
 import { Nodely } from "./types";
 import { getSignature } from "./node-signature";
+import { blue, red } from "console-log-colors";
 
 /*
 Decorators are just a mechanism to color code different parts of the syntax. 
@@ -46,6 +47,7 @@ export const $link = (node: Node) => {
 	const nm = getName(node)
 	return href ? $href(nm, href):nm
 }
+
 /**
  * Creates a name decorator
  * @param text 

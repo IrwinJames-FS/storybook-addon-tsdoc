@@ -3,11 +3,11 @@ import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $href, $kd, $kind, $link, $s, $section, $t, $type } from "./decorators";
+import { $h, $href, $kd, $kind, $link, $literal, $s, $section, $t, $type } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
 import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, getTypeNode, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
 import { fromType, getModifiers, getSignature, getSignatureFromType } from "./node-signature";
-import { STORY_BOOK_BLOCK } from "./constants";
+import { SEP, STORY_BOOK_BLOCK } from "./constants";
 
 
 /**
@@ -20,25 +20,25 @@ import { STORY_BOOK_BLOCK } from "./constants";
 const renderFNDetails = (node: FunctionTypeNode | FunctionDeclaration | FunctionExpression | MethodDeclaration | MethodSignature | ArrowFunction) => {
 	const tp = build(...node.getTypeParameters());
 	const ag = build(...node.getParameters());
-	const rt = build(node.getReturnTypeNode()) || buildFromType(node.getReturnType());
+	const rt = build(node.getReturnTypeNode()) || buildFromType(node.getReturnType()) || $literal('void');
 	return [
 		...tp ? [
 			$section(
-				'---',
+				SEP,
 				$h(5, undefined, "Type Arguments:"),
 				tp
 			) 
 		]:[],
 		...ag ? [
 			$section(
-				'---',
-				$h(5, undefined, "Arguments:"),
+				SEP,
+				$t(5)`Arguments:`,
 				ag
 			)
 		]:[],
 		...rt ? [
 			$section(
-				'---',
+				SEP,
 				$h(5, undefined, "Returns:"),
 				rt
 			)
@@ -108,9 +108,7 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.MethodSignature]: node=>{
 		return block(
 			$s(4, 'method', node),
-			$h(4, node, $kd`method`, node.getName(), ':', getSignature(node)),
-			getComments(node),
-			getExample(node),
+			getDocs(node),
 			...renderFNDetails(node)
 		)
 	},
@@ -120,45 +118,35 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.FunctionExpression]: node => block(...renderFNDetails(node)),
 	[SK.MethodDeclaration]: node=>{
 		return block(
-			$h(4, node, $kd`${node.isStatic() ? 'static ':''}method`, node.getName(), ':', getSignature(node)),
-			getComments(node),
-			getExample(node),
+			$s(4, 'method', node),
+			getDocs(node),
 			...renderFNDetails(node)
 		)
 	},
 	[SK.Parameter]: node=>{
-		
 		return block(
-			$h(4, node, $kd`argument`, getSignature(node)),
-			getComments(node),
-			getExample(node),
-			Node.isObjectBindingPattern(node.getNameNode()) ? build(node.getNameNode()):''
+			$s(4, 'argument', node),
+			getDocs(node),
+			build(node.getNameNode()),
+			build(getTypeNode(node)) || buildFromType(node.getType())
 		)
 	},
 	[SK.TypeParameter]: node=>{
 		const constraint = build(node.getConstraint());
 		if(!constraint) return '';
 		return block(
-			$h(4, node, $kd`param`, getSignature(node)),
-			getComments(node),
-			getExample(node),
-			constraint ? $section(constraint):''
+			$s(4, 'param', node),
+			getDocs(node),
+			$section(constraint)
 		)
 	},
-	[SK.TypeReference]: node=>'',
+	[SK.TypeReference]: ()=>' ', //this should be referenced in a parent signature I am not sure it should be traversed.
 	[SK.UnionType]: node => build(...node.getTypeNodes()),
 	[SK.IntersectionType]: node => build(...node.getTypeNodes()),
 	[SK.ArrayType]: node => build(node.getElementTypeNode()),
 	[SK.ClassDeclaration]:node => block(
-		$h(
-			2, 
-			node, 
-			$kd`class`, 
-			node.getName(),
-			getSignature(node)
-		),
-		getComments(node),
-		getExample(node),
+		$s(2, 'class', node),
+		getDocs(node),
 		$section(
 			build(...node.getConstructors()),
 			build(...node.getStaticBlocks()),
@@ -171,35 +159,33 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.ClassStaticBlockDeclaration]: node=>{
 		const comments = getComments(node).trim();
 		return comments ? block(
-			$h(4, undefined, $kd`static block:`),
+			$t(4)`${$kd`static block`}`,
 			comments,
 			getExample(node)
 		):''
 	},
 	[SK.Constructor]: node=>block(
-		$h(4, node, $kd`constructor`, getSignature(node)),
-		getComments(node),
-		getExample(node)
+		$s(4, 'constructor', node),
+		getDocs(node)
 	),
 	[SK.InterfaceDeclaration]: node=>{
 		const typeParams = build(...node.getTypeParameters());
 		const extensions = build(...node.getExtends());
 		return block(
-			$h(4, node, $kd`interface`, node.getName(), getSignature(node)),
+			$s(4, 'interface', node),
 			...(typeParams ? [
 				'---',
-				$h(5, undefined, 'Type Parameters:'),
+				$t(5)`Type Parameters`,
 				$section(typeParams)
 			]:[]),
 			...(extensions ? [
 				'---',
-				$h(5, undefined, 'Extends:'),
-				$section(typeParams)
+				$t(5)`Extends:`,
+				$section(extensions)
 			]:[]),
-			$section(
-				build(...node.getProperties()),
-				build(...node.getMethods())
-			)
+			'---',
+			$t(5)`Members:`,
+			$sec(...node.getMembers()),
 		);
 	},
 	[SK.ExpressionWithTypeArguments]: node=>build(...node.getTypeArguments()),
@@ -219,7 +205,7 @@ const RENDER_MAP: SKindMap<string> = {
 		const statement = node.getVariableStatement();
 		if(!statement) return '';
 		return block(
-			$h(4, node, $kd`${statement.getDeclarationKind()}`, getName(node), ':', getSignature(node)),
+			$s(4, $kind(statement.getDeclarationKind()), node),
 			getComments(statement),
 			getExample(statement),
 			build(node.getTypeNode() ?? node.getInitializer())
@@ -229,18 +215,13 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.BindingElement]: node => build(node.getPropertyNameNode()),
 	[SK.IndexedAccessType]: node => build(node.getObjectTypeNode(), node.getIndexTypeNode()),
 	[SK.FunctionDeclaration]: node => block(
-		$h(4, node, $kd`function`, node.getName(), ':', getSignature(node))
+		$s(4, 'function', node),
+		getDocs(node),
+		...renderFNDetails(node)
 	),
 	[SK.ExpressionStatement]: node => '', //expressions are blocks of logic. Currently I dont plan on handling these instances. 
 	[SK.ClassExpression]:node => block(
-		$h(
-			2, 
-			node,  
-			node.getName(),
-			getSignature(node)
-		),
-		getComments(node),
-		getExample(node),
+		getDocs(node),
 		$section(
 			build(...node.getConstructors()),
 			build(...node.getStaticBlocks()),
@@ -253,16 +234,25 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.ArrayLiteralExpression]: node => build(...node.getElements()),
 	[SK.ObjectLiteralExpression]: node => block($section(build(...node.getProperties()))),
 	[SK.PropertyAssignment]: node => block(
-		$h(4, node, $kd`property`, getSignature(node)),
-		getComments(node),
-		getExample(node),
+		$s(4, 'property', node),
+		getDocs(node),
 		build(node.getInitializer())
+	),
+	[SK.EnumDeclaration]: node=>block(
+		$s(2, 'enum', node),
+		getDocs(node),
+		build(...node.getMembers())
+	),
+	[SK.EnumMember]: node=>block(
+		$s(4, 'enum item', node),
+		getDocs(node),
 	),
 	[SK.NewExpression]: ()=>``,
 	[SK.ObjectKeyword]: ()=>'',
 	[SK.TypePredicate]: ()=>'',
 	[SK.CallExpression]: ()=>'',
-	[SK.BinaryExpression]: ()=>''
+	[SK.BinaryExpression]: ()=>'',
+	[SK.Identifier]: ()=>' '
 };
 
 //Again a way to ignore or not alert me of lacking support. it seems there should be an interface for this. 
@@ -274,8 +264,11 @@ const IGNOREKINDS = new Set([
 
 export const buildFromType = (type: Type) => {
 	const node = declarationOfType(type);
-	if(!node) return;
+	//If no node is found not much else can be done
+	if(!node) return `<h4 className="ts-doc-header">${fromType(type)}</h4>`;
+	//if this is not directly referencing another node then I guess the documentation needs to continue traversing from the returning declaration.
 	if(type.isAnonymous()) return build(node);
+	//Just show a link.... just like from the signature. 
 	return `<h4 className="ts-doc-header">${fromType(type)}</h4>`;
 }
 /**
@@ -285,11 +278,13 @@ export const buildFromType = (type: Type) => {
  */
 export const build = (...nodes: Nodely[]) => nodes.map(node=>{
 	if(!TS.documentPrivate && isPrivate(node)) return '';
-	return bySyntax(node, RENDER_MAP, n=>{
+	
+	const val =  bySyntax(node, RENDER_MAP, n=>{
 		if(!n || isPrimitive(n)) return '';
 		TS.err("No support", red(n.getKindName()), cyan(n.getKind()), n.getText(), getFullName(n));
-		return '';
-})}).filter(b=>b.trim()).join('\n');
+		return '';})
+	return val;
+}).filter(b=>b).join('\n');
 
 export const renderer = (node: Nodely, df: (node: Nodely)=>string=n=>{
 	if(!n || isPrimitive(n) || IGNOREKINDS.has(n.getKind())) return '';

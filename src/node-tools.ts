@@ -119,6 +119,8 @@ export const getNearestName = (node?: Node) => {
 	return name;
 }
 
+
+
 export const getFName = (node: Node) => {
 	const [pre,post] = bySyntax(node, ModMap, n=>{
 		if(!n) return ['','', []]
