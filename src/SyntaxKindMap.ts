@@ -1,4 +1,4 @@
-import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BigIntLiteral, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FalseLiteral, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TrueLiteral, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
+import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BigIntLiteral, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, EnumDeclaration, EnumMember, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FalseLiteral, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TrueLiteral, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
 import { Nodely } from "./types";
 export interface SyntaxKindTypeMap<T=never> {
@@ -83,6 +83,8 @@ export interface SyntaxKindTypeMap<T=never> {
 	[SK.BigIntLiteral]: BigIntLiteral,
 	[SK.TrueKeyword]: TrueLiteral,
 	[SK.FalseKeyword]: FalseLiteral,
+	[SK.EnumDeclaration]: EnumDeclaration,
+	[SK.EnumMember]: EnumMember,
 	[1337]: Node
 }
 
@@ -168,6 +170,9 @@ export const SyntaxKindDelegator: SyntaxKindValidatorMap = {
 	[SK.BigIntLiteral]: Node.isBigIntLiteral,
 	[SK.TrueKeyword]: Node.isTrueLiteral,
 	[SK.FalseKeyword]: Node.isFalseLiteral,
+	[SK.EnumDeclaration]: Node.isEnumDeclaration,
+	[SK.EnumMember]: Node.isEnumMember,
+	//Used in testing only will be removed as I dont see the point in adding code to force a error to thrown to accomplish 100% code coverage. This is designed for typescript and due to typing even eslint should trigger warnings if being misused.
 	[1337]: (node: Nodely):node is Node=>{
 		return false;
 	}

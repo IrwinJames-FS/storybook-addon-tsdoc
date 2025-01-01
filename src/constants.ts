@@ -5,3 +5,5 @@ import './style.css';
 
 export const typelit = '&lcub;...&rcub;';
 
+export const SEP = '---';
+

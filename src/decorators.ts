@@ -1,6 +1,8 @@
 import { Node } from "ts-morph";
-import { getFullName } from "./node-tools";
+import { getDocPath, getFullName, getName } from "./node-tools";
 import { Nodely } from "./types";
+import { getSignature } from "./node-signature";
+import { blue, red } from "console-log-colors";
 
 /*
 Decorators are just a mechanism to color code different parts of the syntax. 
@@ -36,6 +38,17 @@ export const $literal = (lit: string) => `<span className="ts-doc-lit">${lit}</s
 export const $href = (text: string, href:string) => `[${text}](${href})`;
 
 /**
+ * Just a convenience that can be used anywhere.
+ * 
+ * My new traversal method of types may prevent expressions from being handled however if not this is a good point to add support that does not directly effect the signature process.
+ */
+export const $link = (node: Node) => {
+	const href = getDocPath(node);
+	const nm = getName(node)
+	return href ? $href(nm, href):nm
+}
+
+/**
  * Creates a name decorator
  * @param text 
  * @returns 
@@ -68,6 +81,14 @@ export const $h = (
 <h${s} className="ts-doc-header">${content.join(' ')}</h${s}>
 
 ${ node ? `${'#'.repeat(s)} ${getFullName(node)}\n\n`:''}</div>`;
+
+export const $s = (s: Headings, kind: string, node: Node) => `<div className="ts-doc-header-wrapper">
+	<h${s} className="ts-doc-header">${$kind(kind)} ${getSignature(node)}</h${s}>
+	${'#'.repeat(s)} ${getFullName(node)}
+</div>`
+export const $t = (s: Headings)=>(strings: TemplateStringsArray, ...args: unknown[])=>`<div className="ts-doc-header-wrapper">
+	<h${s} className="ts-doc-header">${strings.reduce((o, s, i)=>o+s+(args[i] ?? ''), '')}</h${s}>
+</div>`;
 
 export const $section = (...content:string[]) => {
 	const ctn = content.filter(c=>c.trim()).join('\n');
