@@ -1,7 +1,7 @@
 import { ArrayBindingPattern, ArrayLiteralExpression, ArrayTypeNode, ArrowFunction, BigIntLiteral, BinaryExpression, BindingElement, CallExpression, ClassDeclaration, ClassExpression, ClassStaticBlockDeclaration, ConditionalTypeNode, ConstructorDeclaration, EnumDeclaration, EnumMember, ExportDeclaration, Expression, ExpressionStatement, ExpressionWithTypeArguments, FalseLiteral, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, IndexedAccessTypeNode, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, NewExpression, Node, NumericLiteral, ObjectBindingPattern, ObjectLiteralExpression, ParameterDeclaration, ParenthesizedTypeNode, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, QualifiedName, RestTypeNode, SetAccessorDeclaration, SyntaxKind as SK, SourceFile, StringLiteral, SyntaxList, TrueLiteral, TupleTypeNode, TypeAliasDeclaration, TypeLiteralNode, TypeOperatorTypeNode, TypeParameterDeclaration, TypePredicateNode, TypeReferenceNode, UnionTypeNode, VariableDeclaration, VariableStatement } from "ts-morph";
 import { SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
 import { Nodely } from "./types";
-export interface SyntaxKindTypeMap<T=never> {
+export interface SyntaxKindTypeMap {
 	[SK.SourceFile]: SourceFile
 	[SK.SyntaxList]: SyntaxList
 	[SK.TypeAliasDeclaration]: TypeAliasDeclaration,

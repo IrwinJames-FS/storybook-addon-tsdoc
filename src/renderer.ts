@@ -1,13 +1,14 @@
-import { ArrowFunction, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, NamedTupleMember, Node, ParameterDeclaration, PropertyDeclaration, PropertySignature, SourceFile, Type, TypeParameterDeclaration } from "ts-morph";
+import { ArrowFunction, FunctionDeclaration, FunctionExpression, FunctionTypeNode, MethodDeclaration, MethodSignature, Node, SourceFile, Type } from "ts-morph";
 import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $href, $kd, $kind, $link, $literal, $s, $section, $t, $type } from "./decorators";
+import { $h, $kd, $kind, $literal, $s, $section, $t } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, getTypeNode, isMethodLike, isPrimitive, isPrivate, isStatic } from "./node-tools";
-import { fromType, getModifiers, getSignature, getSignatureFromType } from "./node-signature";
+import { declarationOfType, getComments, getExample, getFullName, getName, getTypeNode, isPrimitive, isPrivate } from "./node-tools";
+import { getSignature } from "./node-signature";
 import { SEP, STORY_BOOK_BLOCK } from "./constants";
+import { fromType } from "./signitors";
 
 
 /**
@@ -190,12 +191,12 @@ const RENDER_MAP: SKindMap<string> = {
 	},
 	[SK.ExpressionWithTypeArguments]: node=>build(...node.getTypeArguments()),
 	[SK.GetAccessor]: node=> block(
-		$h(4, node, $kd`${node.isStatic() ? 'static ':''}get`, getName(node), ':', getSignature(node)),
+		$s(4, (node.isStatic() ? 'static ':'')+'get', node),
 		getComments(node),
 		getExample(node)
 	),
 	[SK.SetAccessor]: node=>block(
-		$h(4, node, $kd`${node.isStatic() ? 'static ':''}set`, getName(node), ':', getSignature(node)),
+		$s(4, (node.isStatic() ? 'static ':'')+'set', node),
 		getComments(node),
 		getExample(node)
 	),
