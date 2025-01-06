@@ -63,8 +63,27 @@ export const getSignatureName = (node:Node, delim:string=".") => {
 	const family = getFamilyName(node, delim);
 	return `${[family, getName(node)].filter(a=>a).join(delim)}`;
 }
+export const isKeyword = (node: Nodely) => Node.isAnyKeyword(node) 
+|| Node.isInferKeyword(node)
+|| Node.isNeverKeyword(node)
+|| Node.isNumberKeyword(node)
+|| Node.isObjectKeyword(node) //this should probably be handled differently.
+|| Node.isStringKeyword(node)
+|| Node.isSymbolKeyword(node)
+|| Node.isBooleanKeyword(node)
+|| Node.isUndefinedKeyword(node);
 
-export const getJsDocs = (node: Node) => Node.isJSDocable(node) ? node.getJsDocs():[];
+/**
+ * Get the JSDocs if available. 
+ * to avoid potential duplicate documentation explicit corner cases should be used.
+ * 
+ * - variableDeclarations. (the declarations JSDoc should be derived from the statement)
+ * @param node 
+ * @returns 
+ */
+export const getJsDocs = (node: Nodely): JSDoc[] => (Node.isJSDocable(node) && node.getJsDocs())
+|| (Node.isVariableDeclaration(node) && getJsDocs(node.getVariableStatement()))
+|| [];
 
 /**
  * Instead it seems better to just support JSDoc separately from the built in typing. As I integrate properties into the signature process I can omit them from here.
@@ -122,6 +141,10 @@ const ModMap: SKindMap<Modificator> = {
 	}
 }
 
+export const isAsync = (node: Node) => {
+	if(!('isAsync' in node) || typeof node.isAsync !== 'function') return false;
+	return node.isAsync();
+}
 export const getTypeNode = (node?: Node) => (Node.isTyped(node) && node.getTypeNode())
 	|| (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node) ? node.getInitializer()
 	:undefined)

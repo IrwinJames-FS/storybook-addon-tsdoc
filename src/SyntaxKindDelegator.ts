@@ -1,5 +1,6 @@
-import { SyntaxKindMap, SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
-import { SyntaxKindDelegator } from "./SyntaxKindMap";
+import { Node } from "ts-morph";
+import SK, { SyntaxKindDelegateAction, SyntaxKindMap, SyntaxKindValidatorMap } from "./SyntaxKindDelegator.types";
+import { SyntaxKindDelegator, SyntaxKindTypeMap } from "./SyntaxKindMap";
 import { Nodely } from "./types";
 
 /**
@@ -25,3 +26,5 @@ export const bySyntax = <T>(
 	//@ts-ignore
 	return entry(node, defaultFN);
 }
+
+export const combineSyntax = <K extends keyof SyntaxKindTypeMap, T>(keys: K[], action: SyntaxKindDelegateAction<SyntaxKindTypeMap[K], T>):Partial<SyntaxKindMap<T>> => keys.reduce((o,v)=>({...o, [v]:action}), {});

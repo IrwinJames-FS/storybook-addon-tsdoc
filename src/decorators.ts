@@ -2,7 +2,6 @@ import { Node } from "ts-morph";
 import { getDocPath, getFullName, getName } from "./node-tools";
 import { Nodely } from "./types";
 import { getSignature } from "./node-signature";
-import { blue, red } from "console-log-colors";
 
 /*
 Decorators are just a mechanism to color code different parts of the syntax. 
