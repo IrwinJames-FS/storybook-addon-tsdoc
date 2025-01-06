@@ -4,7 +4,7 @@ I just need to split up the logic into more consumable chunks for myself.
 This file will be responsible for providing resusable methods to parse common declaration types
 */
 
-import { ArrayBindingPattern, ArrayLiteralExpression, ArrowFunction, ClassDeclaration, ClassExpression, EnumMember, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedNode, NamedTupleMember, NewExpression, Node, ParameterDeclaration, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, ReturnTypedNode, TupleTypeNode, Type, TypeAliasDeclaration, TypeOperatorTypeNode, TypeParameter, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration } from "ts-morph";
+import { ArrayBindingPattern, ArrayLiteralExpression, ArrowFunction, ClassDeclaration, ClassExpression, EnumMember, Expression, ExpressionableNode, ExtendsClauseableNode, FunctionDeclaration, FunctionExpression, FunctionTypeNode, GetAccessorDeclaration, Identifier, InterfaceDeclaration, IntersectionTypeNode, LiteralTypeNode, MethodDeclaration, MethodSignature, NamedNode, NamedTupleMember, NewExpression, Node, ParameterDeclaration, PropertyAccessExpression, PropertyAssignment, PropertyDeclaration, PropertySignature, ReturnTypedNode, TupleTypeNode, Type, TypeAliasDeclaration, TypeOperatorTypeNode, TypeParameter, TypeParameterDeclaration, TypeReferenceNode, UnionTypeNode, VariableDeclaration } from "ts-morph";
 import { typelit } from "./constants";
 import { $href, $kd, $link, $literal, $name, $type } from "./decorators";
 import { sig } from "./node-signature";
@@ -18,8 +18,18 @@ const modHandler = <N extends Node>(node: N, ...mods: (Mod<N> | string)[]):strin
 	return mods.reduce((o,v)=>o+(typeof v === 'string' ? v:v(node)) as string, '') as string;
 }
 
+/**
+ * Primitive types are simply converted to a string
+ * @param t 
+ * @returns 
+ */
 const isPrimitiveType = (t: Type) => t.isAny() || t.isBigInt() || t.isNever() || t.isNull() || t.isNumber() || t.isString() || t.isBoolean() || t.isUndefined();
 
+/**
+ * Primitive literals are also converted to a string but wrapped in a different wrapper and escaped as they may contain illegal jsx characters.
+ * @param t 
+ * @returns 
+ */
 const isPrimitiveLiteral = (t: Type) => t.isBigIntLiteral() || t.isNumberLiteral() || t.isStringLiteral() || t.isTemplateLiteral() || t.isBooleanLiteral();
 
 
@@ -58,7 +68,14 @@ export const getSignatureFromType = (node: Nodely) => {
 	return tp;
 }
 
+/**
+ * This mod handler simply attempts to parse the name node. This should ultimately end with an identifier but also allow for potential destructured objects to be traversed without change of logic.
+ * @param node 
+ * @returns 
+ */
 export const fromName = (node: Node) => Node.hasName(node) ? sig(node.getNameNode()):'';
+
+export const getExpression = (node: ExpressionableNode | NewExpression) => sig(node.getExpression());
 /**
  * With typenodes not alway being provided this method acts as a point where I can change the logic if getting a typenode fails.
  * @param node 
@@ -70,6 +87,15 @@ export const fromTypeNode = (node: Node): string => {
 	: getSignatureFromType(node) ?? ''
 }
 
+/**
+ * Returns can be explicit or inferred.
+ * 
+ * Similar to a typenode on how its handled.
+ * @todo - prior to checking the type check the jsdocs for a returns or return tag
+ * @todo - traverse the body and collect return expressions manually (this is purely to allow differenciation between class instances and class constructors being returned in the expression.)
+ * @param node 
+ * @returns 
+ */
 export const fromReturn = (node: ReturnTypedNode) => {
 	
 	const tn = node.getReturnTypeNode();
@@ -78,8 +104,20 @@ export const fromReturn = (node: ReturnTypedNode) => {
 	return s || $literal('void');
 }
 
+/**
+ * A convenience method to signature and wrap a statement
+ * @param nodes 
+ * @param pre 
+ * @param post 
+ * @returns 
+ */
 export const genTypes = (nodes: Node[], pre: string ='<', post: string = '>') => nodes.map(sig).join(', ').wrap(pre, post);
 
+/**
+ * Checks if a node is a generator. This is made generic as Arrow functions cant be generators but aside from that can do just about anything else a function can so it does not make sense to have two separate signators.
+ * @param node 
+ * @returns 
+ */
 export const isGenerator = (node: Node) => !('isGenerator' in node) || typeof node.isGenerator !== 'function' ? false:node.isGenerator();
 
 /**
@@ -100,6 +138,18 @@ export const getModifiers = (node: Node) => {
 }
 
 /**
+ * document a contraint
+ * @param node 
+ * @returns 
+ */
+export const getConstraint = (node: TypeParameterDeclaration) => sig(node.getConstraint()).wrap( ' extends ', '');
+
+export const getImplements = (node: ClassDeclaration | ClassExpression) => node.getImplements().map(sig).join(', ').wrap(' implements ', '')
+
+export const getExtend = (node:ClassDeclaration | ClassExpression) => sig(node.getExtends()).wrap(' extends ', '');
+
+export const getExtends = (node:ExtendsClauseableNode) => node.getExtends().map(sig).join(', ').wrap(' extends ', '');
+/**
  * Returns the appropriate operator based on syntax kind. 
  * 
  * could probably just use getText. 
@@ -114,26 +164,124 @@ export const getOperator = (node: TypeOperatorTypeNode) =>{
 	}
 }
 
-export const opt = (node: Node) => (Node.isQuestionTokenable(node) && node.hasQuestionToken()) ? '?':'';
-export const spread = (node: Node) => (Node.isDotDotDotTokenable(node) && node.getDotDotDotToken()) ? '...':'';
-export const getAsync = (node: Node) => isAsync(node) ? 'async ':''
-export const getGenerator = (node: Node) => isGenerator(node) ? '*':'';
-export const getTypeParameters = (node: Node) => genTypes(Node.isTypeParametered(node) ? node.getTypeParameters():[])
-export const getArguments = (node: Node) => `(${Node.isParametered(node) ? node.getParameters().map(sig):[]})`;
 /**
- * These two declaration types share a common signature. no point in repeating myself. 
+ * Checks if value has a question token and if so passes it to the signature.
  * @param node 
  * @returns 
  */
-export const propertyDecSig = (node: PropertyDeclaration | PropertySignature | PropertyAssignment) => modHandler(node, getModifiers, spread, fromName, opt,': ', fromTypeNode);
-export const fnSignature = (node: FunctionDeclaration | FunctionExpression | MethodDeclaration | FunctionTypeNode | MethodSignature | ArrowFunction) => modHandler(node, getAsync, getGenerator, getTypeParameters,fromName(node),getArguments, ' =&gt; ', fromReturn);
-export const namedTupleMember = (node: NamedTupleMember) => modHandler(node, spread, fromName, opt,': ', fromTypeNode);
-export const propertyAccessExpression = (node: PropertyAccessExpression) => modHandler(node, fromName, opt);
+export const opt = (node: Node) => (Node.isQuestionTokenable(node) && node.hasQuestionToken()) ? '?':'';
+
+/**
+ * Checks if a spread symbol precedes the node and if so passes it to the signature. 
+ * @param node 
+ * @returns 
+ */
+export const spread = (node: Node) => (Node.isDotDotDotTokenable(node) && node.getDotDotDotToken()) ? '...':'';
+
+/**
+ * documents a potential async modifier
+ * @param node 
+ * @returns 
+ */
+export const getAsync = (node: Node) => isAsync(node) ? 'async ':''
+
+/**
+ * documents a potential generator modifier.
+ * @param node 
+ * @returns 
+ */
+export const getGenerator = (node: Node) => isGenerator(node) ? '*':'';
+
+/**
+ * documents type parameters.
+ * @param node 
+ * @returns 
+ */
+export const getTypeParameters = (node: Node) => genTypes(Node.isTypeParametered(node) ? node.getTypeParameters():[])
+
+export const getTypeArguments = (node: Node) => genTypes(Node.isTypeArgumented(node) ? node.getTypeArguments():[])
+
+/**
+ * Documents a functions arguments (aka: parameters).
+ * @param node 
+ * @returns 
+ */
+export const getArguments = (node: Node) => `(${Node.isParametered(node) ? node.getParameters().map(sig):[]})`;
+
+/**
+ * These two declaration types share a common signature. no point in repeating myself.
+ * Document a proprty type declaration. 
+ * @param node 
+ * @returns 
+ */
+export const propertyDecSig = (node: PropertyDeclaration | PropertySignature | PropertyAssignment) => modHandler(node,
+	getModifiers, spread, fromName, opt,': ', fromTypeNode);
+
+/**
+ * Document a function type declaration. 
+ * @param node 
+ * @returns 
+ */
+export const fnSignature = (node: FunctionDeclaration | FunctionExpression | MethodDeclaration | FunctionTypeNode | MethodSignature | ArrowFunction) => modHandler(node, 
+	getAsync, getGenerator, getTypeParameters,fromName(node),getArguments, ' =&gt; ', fromReturn);
+
+/**
+ * document a named tuple member.
+ * @param node 
+ * @returns 
+ */
+export const namedTupleMember = (node: NamedTupleMember) => modHandler(node, 
+	spread, fromName, opt,': ', fromTypeNode);
+
+/**
+ * document a property access expression.
+ * @param node 
+ * @returns 
+ */
+export const propertyAccessExpression = (node: PropertyAccessExpression) => modHandler(node, 
+	fromName, opt, sig(node.getExpression()));
+
+/**
+ * Get the type alias declaration
+ * @param node 
+ * @returns 
+ */
+export const typeAliasDeclaration = (node: TypeAliasDeclaration) => modHandler(node, 
+	fromName, getTypeParameters, ': ', fromTypeNode);
+
+/**
+ * Document a union type.
+ * @param node 
+ * @returns 
+ */
 export const unionType = (node: UnionTypeNode) => node.getTypeNodes().map(sig).join(' | ');
+
+/**
+ * Document an intersection type.
+ * @param node 
+ * @returns 
+ */
 export const intersectionType = (node: IntersectionTypeNode) => node.getTypeNodes().map(sig).join(' & ');
-export const literalType = (node: LiteralTypeNode) => $literal(node.getText());
+
+/**
+ * document a literal type
+ * @param node 
+ * @returns 
+ */
+export const literalType = (node: LiteralTypeNode) => $literal(escape(node.getText()));
+
+/**
+ * document an array literal
+ * @param node 
+ * @returns 
+ */
 export const arrayLiteral = (node: ArrayLiteralExpression | TupleTypeNode | ArrayBindingPattern) => node.getElements().map(sig).join(', ').wrap('[',']');
-export const typeAliasDeclaration = (node: TypeAliasDeclaration) => modHandler(node, fromName, getTypeParameters, ': ', fromTypeNode);
+
+/**
+ * document a type reference. funny thing the type reference doesnt create a link. 
+ * @param node 
+ * @returns 
+ */
 export const typeReference = (node: TypeReferenceNode) => {
 	const typeName = node.getTypeName();
 	
@@ -141,17 +289,26 @@ export const typeReference = (node: TypeReferenceNode) => {
 	if(typeName.getText() === "Array") return sig(args[0])+"[]";
 	return sig(typeName) + args.map(sig).join(', ').wrap('<', '>')
 }
+
+/**
+ * An identifier is a sort of reference that points to a definition. if theres a definition and the definition doesnt point back to said node then it becomes a link. 
+ * @todo test this with destructured nodes. 
+ * @param node 
+ * @returns 
+ */
 export const identifier = (node: Identifier) => {
 	const def = node.getDefinitionNodes()[0];
 	if(!def || getFullName(def) === getFullName(node)) return $type(node.getText());
 	const href = getDocPath(def);
 	return href ? $href(node.getText(), href):$type(node.getText());
 }
-export const typeParameter = (node: TypeParameterDeclaration) => {
-	const extension = node.getConstraint();
-	const modifiers = node.getModifiers();
-	return `${modifiers.map(sig).join(' ').wrap('', ' ')}${sig(node.getNameNode())}${extension ? ' extends ' + sig(extension):''}`;
-}
+
+/**
+ * A type parameter 
+ * @param node 
+ * @returns 
+ */
+export const typeParameter = (node: TypeParameterDeclaration) => modHandler(node, getModifiers, fromName, getConstraint);
 
 /**
  * A parameter is a little different then a normal expression in typescript with a parameter typing should be expected or default to any and the initializer should not be used when a typeNode is not present. Also the typ should not be used for this same reason.
@@ -163,15 +320,20 @@ export const parameter = (node: ParameterDeclaration) => {
 	return `${node.isRestParameter() ? $name('...'):''}${sig(node.getNameNode())}: ${typeNode}${initializer.wrap(' = ', '')}`;
 }
 
-export const classDeclaration = (node: ClassDeclaration | ClassExpression) => `${Node.isClassDeclaration(node) ? fromName(node):''}${node.getTypeParameters().map(sig).join(', ').wrap('<','>')}${sig(node.getExtends()).wrap(' extends ', '')}${node.getImplements().map(sig).join(', ').wrap(' implements ', '')}`;
+/**
+ * A class declaration and class express differ at one point and thats the name. 
+ * @param node 
+ * @returns 
+ */
+export const classDeclaration = (node: ClassDeclaration | ClassExpression) => modHandler(node, fromName, getTypeParameters, getExtend, getImplements);
 
-export const interfaceDeclaration = (node: InterfaceDeclaration) => fromName(node) + node.getTypeParameters().map(sig).join(', ').wrap('<','>') + node.getExtends().map(sig).join(', ').wrap(' extends ', '');
+export const interfaceDeclaration = (node: InterfaceDeclaration) => modHandler(node, fromName, getTypeParameters, getExtends);
 
-export const getAccessor = (node: GetAccessorDeclaration) => `${getModifiers(node)}${fromName(node)}: ${fromReturn(node)}`;
+export const getAccessor = (node: GetAccessorDeclaration) => modHandler(node, getModifiers, fromName,': ', fromReturn);
 
 export const variableDeclaration = (node: VariableDeclaration) => modHandler(node, fromName,': ', fromTypeNode);
 
-export const newExpression = (node: NewExpression) => `${sig(node.getExpression())}${genTypes(node.getTypeArguments())}`;
+export const newExpression = (node: NewExpression) => modHandler(node, $kd`new `, getExpression, getTypeArguments,);
 
 export const literal = (node: Node) => $literal(escape(node.getText()));
 

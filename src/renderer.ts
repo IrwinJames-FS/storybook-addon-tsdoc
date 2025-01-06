@@ -191,12 +191,12 @@ const RENDER_MAP: SKindMap<string> = {
 	},
 	[SK.ExpressionWithTypeArguments]: node=>build(...node.getTypeArguments()),
 	[SK.GetAccessor]: node=> block(
-		$h(4, node, $kd`${node.isStatic() ? 'static ':''}get`, getName(node), ':', getSignature(node)),
+		$s(4, (node.isStatic() ? 'static ':'')+'get', node),
 		getComments(node),
 		getExample(node)
 	),
 	[SK.SetAccessor]: node=>block(
-		$h(4, node, $kd`${node.isStatic() ? 'static ':''}set`, getName(node), ':', getSignature(node)),
+		$s(4, (node.isStatic() ? 'static ':'')+'set', node),
 		getComments(node),
 		getExample(node)
 	),
