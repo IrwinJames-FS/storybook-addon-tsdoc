@@ -281,9 +281,9 @@ export const build = (...nodes: Nodely[]) => nodes.map(node=>{
 	if(!TS.documentPrivate && isPrivate(node)) return '';
 	
 	const val =  bySyntax(node, RENDER_MAP, n=>{
-		if(!n || isPrimitive(n)) return '';
-		TS.err("No support", red(n.getKindName()), cyan(n.getKind()), n.getText(), getFullName(n));
-		return '';})
+		if(!n) return '';
+		//TS.err("No support", red(n.getKindName()), cyan(n.getKind()), n.getText(), getFullName(n));
+		return ' ';})
 	return val;
 }).filter(b=>b).join('\n');
 

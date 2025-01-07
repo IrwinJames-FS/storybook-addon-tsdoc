@@ -1,4 +1,4 @@
-import { JSDoc, Node, Type } from "ts-morph";
+import { JSDoc, Node, ParameterDeclaration, ParameteredNode, Type } from "ts-morph";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
@@ -102,8 +102,25 @@ export const parseDoc = (doc: JSDoc) => {
 	const tags = parseTags(doc);
 	return doc.getComment()+(tags ? '\n\n'+tags+'\n---\n':'');
 }
+const getParameters = (node: Node) => Node.isParametered(node) ? node.getParameters():[]
+const getTags = (node: Node, typeFilter?: string | RegExp) => getJsDocs(node).flatMap(d=>{
+	const tags = d.getTags()
+	if(typeFilter) return typeFilter instanceof RegExp ? tags.filter(t=>typeFilter.test(t.getTagName())):tags.filter(t=>typeFilter === t.getTagName());
+	return tags;
+});
+const getJSDocParameters = (node: Nodely) => {
+	if(!node) return [];
+	
+	return node ? getTags(node, 'param'):[];
+}
 
-export const getComments = (node: Node) => (Node.isJSDocable(node) ? node.getJsDocs():[]).map(parseDoc).join('\n')+'\n';
+const getParameterComment = (node: ParameterDeclaration) => {
+	const parent = node.getParent() as Node
+	const i = getParameters(parent).findIndex(el=>el===node);
+	const param = getJSDocParameters(Node.isExpression(parent) ? parent.getParent():parent)[i];
+	return param?.getCommentText() ?? ""; //no parameter index found
+}
+export const getComments = (node: Node) => Node.isParameterDeclaration(node) ? getParameterComment(node):(Node.isJSDocable(node) ? node.getJsDocs():[]).map(parseDoc).join('\n')+'\n';
 /**
  * Converts the ancestors into a family name.
  * @param node 

@@ -16,6 +16,12 @@ export default class TS {
 	static docs: string = join(process.cwd(), ".tsdoc");
 
 	/**
+	 * Describes the glob used to identify tsdocs documentation.
+	 */
+	static get docsGlob(){
+		return `${TS.docs}/**/*.mdx`
+	}
+	/**
 	 * The tsconfig path
 	 */
 	static tsconfig: string = join(process.cwd(), "tsconfig.json");
