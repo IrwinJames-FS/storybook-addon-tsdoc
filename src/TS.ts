@@ -1,7 +1,7 @@
 import { isAbsolute, join } from "path";
 import { blueBright, cyan, green, red, yellow } from "console-log-colors";
 import { Project, SourceFile, } from "ts-morph";
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, FSWatcher, mkdirSync, rmSync, watch, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 import { minimatch } from "minimatch";
 import { render } from "./renderer";
@@ -10,6 +10,8 @@ import './utils'; //adds the wrap function to strng prototype.
  * TS is a central repository for options. This will also handle code compiling based off a tsconfig
  */
 export default class TS {
+	static watcher?: FSWatcher
+	static hasUpdates: boolean = true;
 	/**
 	 * The document folder path
 	 */
@@ -79,8 +81,19 @@ export default class TS {
 		} catch (e){
 			TS.err(e);
 		}
+		TS.hasUpdates = false;
 	}
 
+	static watch(){
+		if(TS.watcher) return;
+		TS.watcher = watch(process.cwd(), {recursive: true})
+		TS.watcher.on("change", (e, fileName)=>{
+			if(!fileName) return;
+			fileName = typeof fileName === 'string' ? fileName:fileName.toString('utf-8');
+			if(!minimatch(fileName, TS.entry)) return;
+			TS.document();
+		})
+	}
 	/**
 	 * Resolves the url to its path name that wil be used. for the path name and the path title
 	 * @param url 
