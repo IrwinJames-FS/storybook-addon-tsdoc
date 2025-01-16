@@ -142,7 +142,6 @@ export default class TS {
 	 * @returns {string}
 	 */
 	static resolveDocPath(url: string): string{
-		TS.log(TS.decs[url], url);
 		const u = '/docs/'+(TS.decs[url] ?? url).replace(/[\/\.\(]/g, '-').replace(/[\)]/g, '');
 		return (TS.decs[u] ?? u)+'--docs';;
 	}

@@ -151,7 +151,6 @@ const RENDER_MAP: SKindMap<string> = {
 	},
 	[SK.TypeReference]: (node)=>sig(node), //this should be referenced in a parent signature I am not sure it should be traversed.
 	[SK.UnionType]: node => {
-		console.log(node.getTypeNodes().map(n=>n.getKindName()))
 		const tns = node.getTypeNodes().filter(n=>Node.isObjectBindingPattern(node) || Node.isObjectLiteralExpression(node))
 		return tns.length ? build(...tns):'';
 	},

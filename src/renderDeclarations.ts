@@ -163,7 +163,6 @@ export const documentDeclaration = (node: Node) => {
 	if(ds.has(t)){
 		if(!TS.decs[title]) {
 			TS.decs[title] = title + '(1)';
-			console.log(TS.decs[title]);
 			title = TS.decs[title]; 
 		} else {
 			let o = 2;
@@ -185,7 +184,6 @@ export const documentDeclaration = (node: Node) => {
 }
 
 export const documentDeclarations = (source: SourceFile) => {
-	TS.warn(source.getFilePath());
 	for(const node of traverse(source)){
 		documentDeclaration(node)
 	}
