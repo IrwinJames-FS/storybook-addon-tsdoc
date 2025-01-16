@@ -104,6 +104,12 @@ export default class TS {
 			TS.document();
 		})
 	}
+
+	/**
+	 * 1 stange case I have encountered is when declarations are differenciated by case such as m and M in svg overwrite the file because file systems are not case specific. as such
+	 * a record of all links will be tracked and if an overlap is detected a different path will be provided.
+	 */
+	static decs: Record<string, string> = {}
 	/**
 	 * Resolves the url to its path name that wil be used. for the path name and the path title
 	 * @param url 
@@ -114,8 +120,9 @@ export default class TS {
 		url = url.slice(process.cwd().length+1); //remove the root.
 		if(!minimatch(url, TS.entry)) return;
 		const u = TS.aliases.reduce((o,v)=>o.replace(...v), url);
-		if(TS.documentStyle === "declaration") return u.replace(path.extname(u), '') //drop the extension
-		return u;
+		const nurl = TS.documentStyle === "declaration" ? u.replace(path.extname(u), ''):u;
+		
+		return TS.decs[nurl] ?? nurl;
 	}
 
 	/**
@@ -135,7 +142,9 @@ export default class TS {
 	 * @returns {string}
 	 */
 	static resolveDocPath(url: string): string{
-		return '/docs/'+url.replace(/[\/\.]/g, '-')+'--docs';
+		TS.log(TS.decs[url], url);
+		const u = '/docs/'+(TS.decs[url] ?? url).replace(/[\/\.\(]/g, '-').replace(/[\)]/g, '');
+		return (TS.decs[u] ?? u)+'--docs';;
 	}
 
 	/**

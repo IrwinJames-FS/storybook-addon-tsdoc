@@ -131,9 +131,9 @@ const getReturns = (node: Node): string => {
  */
 const renderPropLink = (node: Nodely, h: Headings) => {
 	if(!node) return '';
+	documentDeclaration(node)
 	const path = getDocPath(node);
 	if(!path) return '';
-	documentDeclaration(node)
 	return $t(h)`<a href="/?path=${path}">${$kind(getKind(node))} ${getName(node)}</a>`;
 }
 
@@ -155,7 +155,25 @@ const render = (node: Nodely, h: Headings = 2) => {
 
 
 export const documentDeclaration = (node: Node) => {
-	const title = TS.resolveUrl(node.getSourceFile().getFilePath()) + '/'+ getFullName(node, '/');
+	let title = TS.resolveUrl(node.getSourceFile().getFilePath()) + '/'+ getFullName(node, '/');
+	const t = title.toLowerCase();
+	const ds = new Set(Object.keys(TS.decs).map(d=>d.toLowerCase()));
+
+	//Storybook titles are not case sensitive in document CSFs they appear to be in component CSF.
+	if(ds.has(t)){
+		if(!TS.decs[title]) {
+			TS.decs[title] = title + '(1)';
+			console.log(TS.decs[title]);
+			title = TS.decs[title]; 
+		} else {
+			let o = 2;
+			while (ds.has(t+o)) o++;
+			TS.decs[title] = title+`(${o})`;
+			title = TS.decs[title];
+		}
+	} else {
+		TS.decs[title] = title;
+	}
 	const docPath = TS.resolvedDocFilePath(title);
 	const data = render(node);
 	
