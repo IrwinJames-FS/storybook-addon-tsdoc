@@ -23,15 +23,17 @@ export const escape = (text:string)=>{
  */
 declare global {
 	interface String {
-		wrap(a: string, b:string):string
+		wrap(a: string, b:string, esc?:boolean):string
 	}
 }
 
 if (!String.prototype.wrap) {
-	String.prototype.wrap = function(a: string='', b: string=''){
+	String.prototype.wrap = function(a: string='', b: string='', esc: boolean = true){
 		if(!this.toString().trim()) return '';
-		a = escape(a);
-		b = escape(b);
+		if(esc){
+			a = escape(a);
+			b = escape(b);
+		}
 		return `${a}${this}${b}`; //this should already be escaped
 	}
 }

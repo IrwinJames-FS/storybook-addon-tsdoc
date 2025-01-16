@@ -1,11 +1,15 @@
-import { isAbsolute, join } from "path";
+import path, { isAbsolute, join } from "path";
 import { blueBright, cyan, green, red, yellow } from "console-log-colors";
-import { Project, SourceFile, } from "ts-morph";
+import { Node, Project, SourceFile, } from "ts-morph";
 import { cpSync, existsSync, FSWatcher, mkdirSync, rmSync, watch, writeFileSync } from "fs";
 import { TSDocOptions } from "./types";
 import { minimatch } from "minimatch";
 import { render } from "./renderer";
 import './utils'; //adds the wrap function to strng prototype.
+import { getFullName } from "./node-tools";
+import { documentDeclaration, documentDeclarations } from "./renderDeclarations";
+import { STORY_BOOK_BLOCK } from "./constants";
+import { traverse } from "./traverse";
 /**
  * TS is a central repository for options. This will also handle code compiling based off a tsconfig
  */
@@ -52,6 +56,10 @@ export default class TS {
 	 */
 	static documentPrivate: boolean = false;
 
+	/**
+	 * Declaration based documentation is in development. IT DOES NOT YET WORK!!!
+	 */
+	static documentStyle: "declaration" | "file" = "declaration"
 
 	/**
 	 * Documents a project but catches the errors and outputs it with tsdocs prefix.
@@ -77,12 +85,14 @@ export default class TS {
 		cpSync(join(__dirname, "style.css"), join(this.docs, "style.css"));
 
 		try {
-			this.documentProject();
+			this.documentProject(TS.documentStyle === "file" ? TS.documentSourceFile:TS.documentByDeclaration);
 		} catch (e){
 			TS.err(e);
 		}
 		TS.hasUpdates = false;
 	}
+
+	
 
 	static watch(){
 		if(TS.watcher) return;
@@ -94,6 +104,12 @@ export default class TS {
 			TS.document();
 		})
 	}
+
+	/**
+	 * 1 stange case I have encountered is when declarations are differenciated by case such as m and M in svg overwrite the file because file systems are not case specific. as such
+	 * a record of all links will be tracked and if an overlap is detected a different path will be provided.
+	 */
+	static decs: Record<string, string> = {}
 	/**
 	 * Resolves the url to its path name that wil be used. for the path name and the path title
 	 * @param url 
@@ -103,7 +119,10 @@ export default class TS {
 		if(!url.startsWith(process.cwd())) return;
 		url = url.slice(process.cwd().length+1); //remove the root.
 		if(!minimatch(url, TS.entry)) return;
-		return TS.aliases.reduce((o,v)=>o.replace(...v), url);
+		const u = TS.aliases.reduce((o,v)=>o.replace(...v), url);
+		const nurl = TS.documentStyle === "declaration" ? u.replace(path.extname(u), ''):u;
+		
+		return TS.decs[nurl] ?? nurl;
 	}
 
 	/**
@@ -123,13 +142,14 @@ export default class TS {
 	 * @returns {string}
 	 */
 	static resolveDocPath(url: string): string{
-		return '/docs/'+url.replace(/[\/\.]/g, '-')+'--docs';
+		const u = '/docs/'+(TS.decs[url] ?? url).replace(/[\/\.\(]/g, '-').replace(/[\)]/g, '');
+		return (TS.decs[u] ?? u)+'--docs';;
 	}
 
 	/**
 	 * Create a project (program) and crawl the parsed data.
 	 */
-	static documentProject(){
+	static documentProject(documentor: (node: SourceFile)=>void = TS.documentSourceFile){
 		const project = new Project({
 			tsConfigFilePath: this.tsconfig,
 		});
@@ -139,7 +159,7 @@ export default class TS {
 			if(!match) project.removeSourceFile(f)
 		});
 		TS.log(cyan("Documenting"), join(process.cwd(), TS.entry), red(project.getSourceFiles().length), `file${project.getSourceFiles().length === 1 ? '':'s'}`);
-		project.getSourceFiles().forEach(this.documentSourceFile);
+		project.getSourceFiles().forEach(documentor);
 	} 
 
 	/**
@@ -158,6 +178,10 @@ export default class TS {
 		const data = render(path, source);
 		if(!data) return;
 		return writeFileSync(TS.resolvedDocFilePath(path), data);
+	}
+
+	static documentByDeclaration(source: SourceFile) {
+		documentDeclarations(source);
 	}
 
 	/**

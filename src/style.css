@@ -1,16 +1,27 @@
 .ts-doc-header-wrapper{
 	position: relative;
 }
-h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
-	height: 2px; /* hide without being hidden */
-	padding: 0;
-	margin: 0;
-	font-size:0;
-	border-bottom-width: 0px;
-	position: absolute;
-	background:#F00;
-	top: calc(50% - 8px);
+.ts-doc-document{
+	h1:not(.ts-doc-header), h2:not(.ts-doc-header), h3:not(.ts-doc-header), h4:not(.ts-doc-header), h5:not(.ts-doc-header), h6:not(.ts-doc-header){
+		height: 2px; /* hide without being hidden */
+		padding: 0;
+		margin: 0;
+		font-size:0;
+		border-bottom-width: 0px;
+		position: absolute;
+		background:#F00;
+		top: calc(50% - 8px);
+	}
+
+	a{
+		cursor: pointer;
+		& > * {
+			cursor: pointer;
+		}
+	}
 }
+
+
 
 h2.ts-doc-header{
 	font-size: 1.25rem;
@@ -31,7 +42,9 @@ h5.ts-doc-header{
 h6.ts-doc-header{
 	font-size: 1.05rem;
 }
-
+.ts-doc-reg{
+	font-size: 0.8rem !important;
+}
 .ts-doc-header {
 	margin:1rem 0;
 }
