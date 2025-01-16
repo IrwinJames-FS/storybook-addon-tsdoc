@@ -179,7 +179,7 @@ export const opt = (node: Node) => (Node.isQuestionTokenable(node) && node.hasQu
 export const spread = (node: Node) => (Node.isDotDotDotTokenable(node) && node.getDotDotDotToken()) ? '...':'';
 
 /**
- * documents a potential async modifier
+ * documents a potential async modifier 
  * @param node 
  * @returns 
  */
@@ -206,7 +206,7 @@ export const getTypeArguments = (node: Node) => genTypes(Node.isTypeArgumented(n
  * @param node 
  * @returns 
  */
-export const getArguments = (node: Node) => `(${Node.isParametered(node) ? node.getParameters().map(sig):[]})`;
+export const getArguments = (node: Node) => `(${(Node.isParametered(node) ? node.getParameters().map(sig):[]).join(', ')})`;
 
 /**
  * These two declaration types share a common signature. no point in repeating myself.
@@ -215,7 +215,7 @@ export const getArguments = (node: Node) => `(${Node.isParametered(node) ? node.
  * @returns 
  */
 export const propertyDecSig = (node: PropertyDeclaration | PropertySignature | PropertyAssignment) => modHandler(node,
-	getModifiers, spread, fromName, opt,': ', fromTypeNode);
+	getModifiers, spread, fromTypeNode, opt);
 
 /**
  * Document a function type declaration. 
@@ -223,7 +223,7 @@ export const propertyDecSig = (node: PropertyDeclaration | PropertySignature | P
  * @returns 
  */
 export const fnSignature = (node: FunctionDeclaration | FunctionExpression | MethodDeclaration | FunctionTypeNode | MethodSignature | ArrowFunction) => modHandler(node, 
-	getAsync, getGenerator, getTypeParameters,fromName(node),getArguments, ' =&gt; ', fromReturn);
+getAsync, getTypeParameters, getArguments, getGenerator, ' =&gt; ', fromReturn);
 
 /**
  * document a named tuple member.
@@ -238,16 +238,14 @@ export const namedTupleMember = (node: NamedTupleMember) => modHandler(node,
  * @param node 
  * @returns 
  */
-export const propertyAccessExpression = (node: PropertyAccessExpression) => modHandler(node, 
-	fromName, opt, sig(node.getExpression()));
+export const propertyAccessExpression = (node: PropertyAccessExpression) => modHandler(node, sig(node.getExpression()), opt);
 
 /**
  * Get the type alias declaration
  * @param node 
  * @returns 
  */
-export const typeAliasDeclaration = (node: TypeAliasDeclaration) => modHandler(node, 
-	fromName, getTypeParameters, ': ', fromTypeNode);
+export const typeAliasDeclaration = (node: TypeAliasDeclaration) => fromTypeNode(node);
 
 /**
  * Document a union type.
@@ -325,16 +323,16 @@ export const parameter = (node: ParameterDeclaration) => {
  * @param node 
  * @returns 
  */
-export const classDeclaration = (node: ClassDeclaration | ClassExpression) => modHandler(node, fromName, getTypeParameters, getExtend, getImplements);
+export const classDeclaration = (node: ClassDeclaration | ClassExpression) => modHandler(node, Node.isClassExpression(node) ? $kd`class`:'', getTypeParameters, getExtend, getImplements);
 
-export const interfaceDeclaration = (node: InterfaceDeclaration) => modHandler(node, fromName, getTypeParameters, getExtends);
+export const interfaceDeclaration = (node: InterfaceDeclaration) => modHandler(node, getTypeParameters, getExtends);
 
-export const getAccessor = (node: GetAccessorDeclaration) => modHandler(node, getModifiers, fromName,': ', fromReturn);
+export const getAccessor = (node: GetAccessorDeclaration) => modHandler(node, getModifiers, fromReturn);
 
-export const variableDeclaration = (node: VariableDeclaration) => modHandler(node, fromName,': ', fromTypeNode);
+export const variableDeclaration = (node: VariableDeclaration) =>  fromTypeNode(node)
 
 export const newExpression = (node: NewExpression) => modHandler(node, $kd`new `, getExpression, getTypeArguments,);
 
 export const literal = (node: Node) => $literal(escape(node.getText()));
 
-export const enummember = (node: EnumMember) => fromName(node)+sig(node.getInitializer()).wrap(': ', '');
+export const enummember = (node: EnumMember) => sig(node.getInitializer()).wrap(': ', '');

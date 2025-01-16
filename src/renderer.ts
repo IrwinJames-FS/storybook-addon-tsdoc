@@ -3,14 +3,21 @@ import { Nodely } from "./types";
 import TS from "./TS";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK, { SKindMap } from "./SyntaxKindDelegator.types";
-import { $h, $kd, $kind, $literal, $s, $section, $t } from "./decorators";
+import { $h, $kd, $kind, $link, $literal, $s, $section, $t } from "./decorators";
 import { cyan, red, yellow } from "console-log-colors";
-import { declarationOfType, getComments, getExample, getFullName, getName, getTypeNode, isPrimitive, isPrivate } from "./node-tools";
-import { getSignature } from "./node-signature";
+import { declarationOfType, getComments, getDocPath, getExample, getFullName, getName, getTypeNode, isPrimitive, isPrivate } from "./node-tools";
+import { getSignature, sig } from "./node-signature";
 import { SEP, STORY_BOOK_BLOCK } from "./constants";
 import { fromType } from "./signitors";
+import { escape } from "./utils";
 
-
+/**
+ 
+ * @param node 
+ */
+const shouldCrawl = (node: Node) => {
+	return Node.isTypeLiteral(node) || Node.isObjectBindingPattern(node) || Node.isObjectLiteralExpression(node) || Node.isFunctionExpression(node) || Node.isArrowFunction(node)
+}
 /**
  * Standardizes the properties handled by different function like declarations and expressions.
  * @param typeParams 
@@ -101,14 +108,17 @@ const RENDER_MAP: SKindMap<string> = {
 		getDocs(node),
 		$sec(getTypeNode(node)),
 	),
-	[SK.PropertyDeclaration]: node=>block(
-		$s(4, 'property', node),
-		getDocs(node),
-		$sec(getTypeNode(node)),
-	),
+	[SK.PropertyDeclaration]: node=>{
+		const tn = getTypeNode(node);
+		return block(
+			$s(4, `${node.isStatic() ? 'static ':''}property`, node),
+			getDocs(node),
+			(tn && shouldCrawl(tn)) ? $sec(getTypeNode(node)):'',
+		)
+	},
 	[SK.MethodSignature]: node=>{
 		return block(
-			$s(4, 'method', node),
+			$s(4, `method`, node),
 			getDocs(node),
 			...renderFNDetails(node)
 		)
@@ -119,7 +129,7 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.FunctionExpression]: node => block(...renderFNDetails(node)),
 	[SK.MethodDeclaration]: node=>{
 		return block(
-			$s(4, 'method', node),
+			$s(4, `${node.isStatic() ? 'static ':''}method`, node),
 			getDocs(node),
 			...renderFNDetails(node)
 		)
@@ -127,9 +137,7 @@ const RENDER_MAP: SKindMap<string> = {
 	[SK.Parameter]: node=>{
 		return block(
 			$s(4, 'argument', node),
-			getDocs(node),
-			build(node.getNameNode()),
-			build(getTypeNode(node)) || buildFromType(node.getType())
+			getDocs(node)
 		)
 	},
 	[SK.TypeParameter]: node=>{
@@ -141,8 +149,12 @@ const RENDER_MAP: SKindMap<string> = {
 			$section(constraint)
 		)
 	},
-	[SK.TypeReference]: ()=>' ', //this should be referenced in a parent signature I am not sure it should be traversed.
-	[SK.UnionType]: node => build(...node.getTypeNodes()),
+	[SK.TypeReference]: (node)=>sig(node), //this should be referenced in a parent signature I am not sure it should be traversed.
+	[SK.UnionType]: node => {
+		console.log(node.getTypeNodes().map(n=>n.getKindName()))
+		const tns = node.getTypeNodes().filter(n=>Node.isObjectBindingPattern(node) || Node.isObjectLiteralExpression(node))
+		return tns.length ? build(...tns):'';
+	},
 	[SK.IntersectionType]: node => build(...node.getTypeNodes()),
 	[SK.ArrayType]: node => build(node.getElementTypeNode()),
 	[SK.ClassDeclaration]:node => block(

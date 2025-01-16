@@ -1,4 +1,4 @@
-import { getFullName, isPrimitive } from "./node-tools";
+import { getFullName, getName, getTypeNode, isPrimitive } from "./node-tools";
 import { bySyntax } from "./SyntaxKindDelegator";
 import SK from "./SyntaxKindDelegator.types";
 import { $type } from "./decorators";
@@ -33,6 +33,7 @@ export const sig = (node: Nodely) =>  (!!node && !Ignores.has(node.getKind())) ?
  * @param node 
  */
 export const getSignature = (node: Nodely) => {
-	return sig(node);
+	const s = sig(node);
+	return s
 }
 

@@ -17,14 +17,10 @@ interface Nameable extends Node {
  * @param node 
  * @returns 
  */
-export const isPrivate = (node: Nodely) => {
-	if(!node) return true; //must be private its so private it doesnt exist.
-
-	//check if the node has a private modifier (typescript syntax sugar)
-	return (Node.isModifierable(node) && node.hasModifier(SK.PrivateKeyword))
-	//check if there is a private tag in jsdocs
-	|| (Node.isJSDocable(node) && node.getJsDocs().some(d=>d.getTags().some(t=>t.getTagName().toLowerCase() === 'private')))
-}
+export const isPrivate = (node: Nodely):boolean => !node 
+|| (Node.isModifierable(node) && node.hasModifier(SK.PrivateKeyword)) 
+|| (Node.isJSDocable(node) && !!node.getJsDocs().find(d=>d.getTags().some(t=>t.getTagName().toLowerCase() === 'private'))) 
+|| (Node.isVariableDeclaration(node) && isPrivate(node.getVariableStatement()));
 /**
  * Check if a node has getName method
  * @param node 
@@ -32,7 +28,6 @@ export const isPrivate = (node: Nodely) => {
  */
 const hasName = <T extends Node>(node: T): node is T & Nameable => 'getName' in node 
 && typeof node.getName === 'function'
-&& !Node.isParameterDeclaration(node)
 
 /**
  * Get a nodes name if one is available
@@ -50,7 +45,7 @@ export const getName = <T extends Node>(node: Nodely<T>):string => (node && hasN
  */
 export const getFullName = (node: Node, delim:string=".") => {
 	const family = getFamilyName(node, delim);
-	return [family, getName(node)].filter(a=>a).join(delim);
+	return [family, (Node.isStaticable(node) && node.isStatic() ? 'static':''),  getName(node)].filter(a=>a).join(delim);
 }
 
 /**
@@ -89,7 +84,9 @@ export const getJsDocs = (node: Nodely): JSDoc[] => (Node.isJSDocable(node) && n
  * Instead it seems better to just support JSDoc separately from the built in typing. As I integrate properties into the signature process I can omit them from here.
  */
 export const OMITTED_TAGS = new Set([
-	"example"
+	"example",
+	"param",
+	"returns"
 ]);
 /**
  * This method is to simplify some of the tag parsing into one place. however with some tags being designed to affect the actual typing in the linter and editor I need to experiment with how these tags effect typescript in different environments.
@@ -100,7 +97,8 @@ export const OMITTED_TAGS = new Set([
 export const parseTags = (doc: JSDoc) => doc.getTags().filter(t=>!OMITTED_TAGS.has(t.getTagName())).map(t=>$t(6)`${$kd`&#64;${t.getTagName()}`} ${Node.isJSDocTypeTag(t) ? ' : '+getSignature(t.getTypeExpression()?.getTypeNode()):''} ${t.getCommentText()}`).join('\n');
 export const parseDoc = (doc: JSDoc) => {
 	const tags = parseTags(doc);
-	return doc.getComment()+(tags ? '\n\n'+tags+'\n---\n':'');
+	
+	return (doc.getComment() ?? "")+(tags ? '\n\n'+tags+'\n---\n':'');
 }
 const getParameters = (node: Node) => Node.isParametered(node) ? node.getParameters():[]
 const getTags = (node: Node, typeFilter?: string | RegExp) => getJsDocs(node).flatMap(d=>{
@@ -114,13 +112,16 @@ const getJSDocParameters = (node: Nodely) => {
 	return node ? getTags(node, 'param'):[];
 }
 
+
 const getParameterComment = (node: ParameterDeclaration) => {
 	const parent = node.getParent() as Node
 	const i = getParameters(parent).findIndex(el=>el===node);
 	const param = getJSDocParameters(Node.isExpression(parent) ? parent.getParent():parent)[i];
 	return param?.getCommentText() ?? ""; //no parameter index found
 }
-export const getComments = (node: Node) => Node.isParameterDeclaration(node) ? getParameterComment(node):(Node.isJSDocable(node) ? node.getJsDocs():[]).map(parseDoc).join('\n')+'\n';
+export const getComments = (node: Nodely):string => (Node.isParameterDeclaration(node) ? getParameterComment(node)
+:Node.isVariableDeclaration(node) ? getComments(node.getVariableStatement())
+:(Node.isJSDocable(node) ? node.getJsDocs():[]).map(parseDoc).join('\n')+'\n').wrap('','<br/>', false);
 /**
  * Converts the ancestors into a family name.
  * @param node 
@@ -163,7 +164,7 @@ export const isAsync = (node: Node) => {
 	return node.isAsync();
 }
 export const getTypeNode = (node?: Node) => (Node.isTyped(node) && node.getTypeNode())
-	|| (Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node) ? node.getInitializer()
+	|| ((Node.isInitializerExpressionGetable(node) || Node.isInitializerExpressionable(node)) ? node.getInitializer()
 	:undefined)
 /**
  * In some cases the named node is the parent node of the evaluated node this just climbs the node tree until it finds a name
@@ -201,7 +202,8 @@ export const getDocPath = (node: Node): string | undefined => {
 	const src = node.getSourceFile().getFilePath();
 	const ref = TS.resolveUrl(src)
 	if(!ref) return;
-	const fn = getFullName(node, '')
+	const fn = getFullName(node, TS.documentStyle === 'file' ? '':'/')
+	if(TS.documentStyle === "declaration") return TS.resolveDocPath(ref+'/' + fn); //no need for deeplinking but more explicit naming
 	return TS.resolveDocPath(ref)+(fn ? '#'+fn.toLowerCase():'')
 }
 

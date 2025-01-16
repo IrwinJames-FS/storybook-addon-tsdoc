@@ -2,6 +2,7 @@ import { Node } from "ts-morph";
 import { getDocPath, getFullName, getName } from "./node-tools";
 import { Nodely } from "./types";
 import { getSignature } from "./node-signature";
+import { STORY_BOOK_BLOCK } from "./constants";
 
 /*
 Decorators are just a mechanism to color code different parts of the syntax. 
@@ -62,6 +63,7 @@ export const $name = (text: string) => `<span className="ts-doc-name">${text}</s
  */
 export const $kd = (strings: TemplateStringsArray, ...args: unknown[]) => $kind(strings.reduce((o, s, i)=>o+s+(args[i] ?? ''), ''));
 
+export const $reg = (...strings: unknown[]) => `<span className="ts-doc-reg">${strings.filter(a=>a).join('')}</span>`;
 export type Headings =  1 | 2 | 3 | 4 | 5 | 6;
 /**
  * Create a title section that allows for a more dynamic naming then what .mdx typically supports. 
@@ -80,9 +82,12 @@ export const $h = (
 <h${s} className="ts-doc-header">${content.join(' ')}</h${s}>
 
 ${ node ? `${'#'.repeat(s)} ${getFullName(node)}\n\n`:''}</div>`;
+export const $doc = (data: string, title: string) => `${STORY_BOOK_BLOCK}
+<Meta title="${title}"/>
 
+<article className="ts-doc-document">${data}</article>`;
 export const $s = (s: Headings, kind: string, node: Node) => `<div className="ts-doc-header-wrapper">
-	<h${s} className="ts-doc-header">${$kind(kind)} ${getSignature(node)}</h${s}>
+	<h${s} className="ts-doc-header">${$kind(kind)} ${getName(node)} ${($reg(Node.isParameterDeclaration(node) ? (node.isRestParameter() ? '...':'') + getSignature(node.getTypeNode()):getSignature(node))).wrap(': ', '')}</h${s}>
 	${'#'.repeat(s)} ${getFullName(node)}
 </div>`
 export const $t = (s: Headings)=>(strings: TemplateStringsArray, ...args: unknown[])=>`<div className="ts-doc-header-wrapper">
@@ -94,5 +99,5 @@ export const $section = (...content:string[]) => {
 	if(!ctn) return '';
 	return `<div className="ts-doc-section">
 		${ctn}
-	</div>`
+</div>`
 }
